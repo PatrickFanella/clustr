@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { TypeFilters } from "../types/ui";
+import { useTheme } from "../contexts/ThemeContext";
 
 type Physics = {
   chargeStrength: number;
@@ -46,6 +47,9 @@ interface Props {
   onTogglePrecomputedLayout?: (enabled: boolean) => void;
   sizeAttenuation?: boolean;
   onToggleSizeAttenuation?: (enabled: boolean) => void;
+  enableAdaptiveLOD?: boolean;
+  onToggleAdaptiveLOD?: (enabled: boolean) => void;
+  currentLODTier?: number;
 }
 
 export default function Controls(props: Props) {
@@ -78,7 +82,11 @@ export default function Controls(props: Props) {
     onTogglePrecomputedLayout,
     sizeAttenuation,
     onToggleSizeAttenuation,
+    enableAdaptiveLOD,
+    onToggleAdaptiveLOD,
+    currentLODTier,
   } = props;
+  const { theme, themeMode, setThemeMode, highContrast, setHighContrast } = useTheme();
   const [search, setSearch] = useState("");
   const [srv, setSrv] = useState<{
     crawler_enabled: boolean;
@@ -139,47 +147,56 @@ export default function Controls(props: Props) {
   );
 
   return (
-    <div className="absolute z-20 top-2 right-2 bg-black/60 text-white p-3 rounded shadow flex flex-col gap-3">
+    <div className="absolute z-20 top-2 right-2 bg-gray-100/90 dark:bg-black/60 text-gray-900 dark:text-white p-3 rounded shadow flex flex-col gap-3 transition-colors duration-200" role="region" aria-label="Graph controls">
       <div className="flex gap-2 items-center">
-        <label className="text-xs">View:</label>
-        <button
-          className={`px-2 py-1 rounded border ${
-            graphMode === "3d"
-              ? "bg-blue-600 border-blue-400"
-              : "bg-gray-700 border-gray-500"
-          } text-white text-sm`}
-          onClick={() => onGraphModeChange?.("3d")}
-        >
-          3D
-        </button>
-        <button
-          className={`px-2 py-1 rounded border ${
-            graphMode === "2d"
-              ? "bg-blue-600 border-blue-400"
-              : "bg-gray-700 border-gray-500"
-          } text-white text-sm`}
-          onClick={() => onGraphModeChange?.("2d")}
-        >
-          2D
-        </button>
-        <button
-          className="px-2 py-1 rounded border bg-purple-600 border-purple-400 hover:bg-purple-700 text-white text-sm"
-          onClick={() => onShowDashboard?.()}
-        >
-          Dashboard
-        </button>
-        <button
-          className="px-2 py-1 rounded border bg-green-600 border-green-400 hover:bg-green-700 text-white text-sm"
-          onClick={() => onShowCommunities?.()}
-        >
-          Communities
-        </button>
-        <button
-          className="px-2 py-1 rounded border bg-red-600 border-red-400 hover:bg-red-700 text-white text-sm"
-          onClick={() => onShowAdmin?.()}
-        >
-          Admin
-        </button>
+        <label className="text-xs" id="view-mode-label">View:</label>
+        <div role="group" aria-labelledby="view-mode-label" className="flex gap-2">
+          <button
+            className={`px-2 py-1 rounded border ${
+              graphMode === "3d"
+                ? "bg-blue-600 border-blue-400"
+                : "bg-gray-700 border-gray-500"
+            } text-white text-sm`}
+            onClick={() => onGraphModeChange?.("3d")}
+            aria-label="Switch to 3D view"
+            aria-pressed={graphMode === "3d"}
+          >
+            3D
+          </button>
+          <button
+            className={`px-2 py-1 rounded border ${
+              graphMode === "2d"
+                ? "bg-blue-600 border-blue-400"
+                : "bg-gray-700 border-gray-500"
+            } text-white text-sm`}
+            onClick={() => onGraphModeChange?.("2d")}
+            aria-label="Switch to 2D view"
+            aria-pressed={graphMode === "2d"}
+          >
+            2D
+          </button>
+          <button
+            className="px-2 py-1 rounded border bg-purple-600 border-purple-400 hover:bg-purple-700 text-white text-sm"
+            onClick={() => onShowDashboard?.()}
+            aria-label="Show dashboard"
+          >
+            Dashboard
+          </button>
+          <button
+            className="px-2 py-1 rounded border bg-green-600 border-green-400 hover:bg-green-700 text-white text-sm"
+            onClick={() => onShowCommunities?.()}
+            aria-label="Show communities view"
+          >
+            Communities
+          </button>
+          <button
+            className="px-2 py-1 rounded border bg-red-600 border-red-400 hover:bg-red-700 text-white text-sm"
+            onClick={() => onShowAdmin?.()}
+            aria-label="Show admin panel"
+          >
+            Admin
+          </button>
+        </div>
       </div>
       {onToggleCommunityColors && (
         <label className="flex items-center gap-2 text-sm">
@@ -211,7 +228,86 @@ export default function Controls(props: Props) {
           Distance-based node sizing
         </label>
       )}
-      <div className="text-xs text-white/70">Admin</div>
+      {onToggleAdaptiveLOD && (
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!enableAdaptiveLOD}
+              onChange={(e) => onToggleAdaptiveLOD?.(e.target.checked)}
+            />
+            Adaptive LOD (Level-of-Detail)
+          </label>
+          {currentLODTier !== undefined && (
+            <div className="text-xs text-gray-600 dark:text-white/60 ml-5">
+              Current tier: {
+                currentLODTier === 0 ? 'Emergency' :
+                currentLODTier === 1 ? 'Low' :
+                currentLODTier === 2 ? 'Medium' :
+                currentLODTier === 3 ? 'High' :
+                'Unknown'
+              }
+            </div>
+          )}
+        </div>
+      )}
+      <div className="text-xs text-gray-700 dark:text-white/70">Theme</div>
+      <div role="group" aria-label="Theme selection" className="flex items-center gap-2">
+        <button
+          className={`px-2 py-1 rounded border text-sm ${
+            themeMode === 'system'
+              ? 'bg-blue-600 border-blue-400'
+              : 'bg-gray-700 border-gray-500'
+          }`}
+          onClick={() => setThemeMode('system')}
+          aria-label="Use system theme"
+          aria-pressed={themeMode === 'system'}
+        >
+          System
+        </button>
+        <button
+          className={`px-2 py-1 rounded border text-sm ${
+            themeMode === 'light'
+              ? 'bg-blue-600 border-blue-400'
+              : 'bg-gray-700 border-gray-500'
+          }`}
+          onClick={() => setThemeMode('light')}
+          aria-label="Use light theme"
+          aria-pressed={themeMode === 'light'}
+        >
+          Light
+        </button>
+        <button
+          className={`px-2 py-1 rounded border text-sm ${
+            themeMode === 'dark'
+              ? 'bg-blue-600 border-blue-400'
+              : 'bg-gray-700 border-gray-500'
+          }`}
+          onClick={() => setThemeMode('dark')}
+          aria-label="Use dark theme"
+          aria-pressed={themeMode === 'dark'}
+        >
+          Dark
+        </button>
+      </div>
+      {themeMode === 'system' && (
+        <div className="text-xs text-gray-600 dark:text-white/60" role="status" aria-live="polite">
+          Active: {theme === 'dark' ? 'Dark' : 'Light'}
+        </div>
+      )}
+      
+      {/* High Contrast Mode Toggle */}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={highContrast}
+          onChange={(e) => setHighContrast(e.target.checked)}
+          aria-label="Toggle high contrast mode"
+        />
+        High contrast mode
+      </label>
+      
+      <div className="text-xs text-gray-700 dark:text-white/70">Admin</div>
       <div className="flex items-center gap-3 text-sm">
         <button
           className={`px-3 py-1 rounded border ${
@@ -222,6 +318,8 @@ export default function Controls(props: Props) {
           //disabled={!srv || saving}
           disabled={true}
           onClick={() => updateSrv({ crawler_enabled: !srv?.crawler_enabled })}
+          aria-label={srv?.crawler_enabled ? "Turn crawler off" : "Turn crawler on"}
+          aria-pressed={srv?.crawler_enabled}
         >
           {srv?.crawler_enabled ? "Crawler ON" : "Crawler OFF"}
         </button>
@@ -234,24 +332,30 @@ export default function Controls(props: Props) {
           //   disabled={!srv || saving}
           disabled={true}
           onClick={() => updateSrv({ precalc_enabled: !srv?.precalc_enabled })}
+          aria-label={srv?.precalc_enabled ? "Turn precalculation off" : "Turn precalculation on"}
+          aria-pressed={srv?.precalc_enabled}
         >
           {srv?.precalc_enabled ? "Precalc ON" : "Precalc OFF"}
         </button>
         {/* Precalc runs in its own service; run-now removed */}
-        {srvErr && <span className="text-red-400 text-xs">{srvErr}</span>}
+        {srvErr && <span className="text-red-400 text-xs" role="alert">{srvErr}</span>}
       </div>
       <div className="flex gap-2 items-center">
+        <label htmlFor="focus-node-search" className="sr-only">Focus node by ID or name</label>
         <input
+          id="focus-node-search"
           value={search}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setSearch(e.target.value)
           }
           placeholder="Focus node by id/name"
           className="bg-black/40 border border-white/20 rounded px-2 py-1 text-sm outline-none"
+          aria-label="Focus node by ID or name"
         />
         <button
           className="border border-white/30 rounded px-2 py-1 hover:bg-white/10"
           onClick={() => onFocusNode(search || undefined)}
+          aria-label="Focus on the specified node"
         >
           Focus
         </button>
@@ -262,13 +366,15 @@ export default function Controls(props: Props) {
           type="checkbox"
           checked={!!showLabels}
           onChange={(e) => onShowLabelsChange?.(e.target.checked)}
+          aria-label="Toggle node labels visibility"
         />
         Show labels
       </label>
 
       <div className="flex gap-3 items-center">
-        <label className="text-sm">Link opacity</label>
+        <label htmlFor="link-opacity-slider" className="text-sm">Link opacity</label>
         <input
+          id="link-opacity-slider"
           type="range"
           min={0}
           max={1}
@@ -277,12 +383,18 @@ export default function Controls(props: Props) {
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             onLinkOpacityChange(parseFloat(e.target.value))
           }
+          aria-label={`Link opacity: ${(linkOpacity * 100).toFixed(0)}%`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(linkOpacity * 100)}
+          aria-valuetext={`${(linkOpacity * 100).toFixed(0)}%`}
         />
       </div>
 
       <div className="flex gap-3 items-center">
-        <label className="text-sm">Node size</label>
+        <label htmlFor="node-size-slider" className="text-sm">Node size</label>
         <input
+          id="node-size-slider"
           type="range"
           min={2}
           max={12}
@@ -291,18 +403,25 @@ export default function Controls(props: Props) {
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             onNodeRelSizeChange(parseInt(e.target.value))
           }
+          aria-label={`Node size: ${nodeRelSize}`}
+          aria-valuemin={2}
+          aria-valuemax={12}
+          aria-valuenow={nodeRelSize}
+          aria-valuetext={`${nodeRelSize}`}
         />
       </div>
 
       {/* Subreddit sizing metric */}
       <div className="flex gap-3 items-center">
-        <label className="text-sm whitespace-nowrap">Subreddit size</label>
+        <label htmlFor="subreddit-size-select" className="text-sm whitespace-nowrap">Subreddit size</label>
         <select
+          id="subreddit-size-select"
           className="bg-black/40 border border-white/20 rounded px-2 py-1 text-sm outline-none"
           value={subredditSize}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             onSubredditSizeChange(e.target.value as Props["subredditSize"])
           }
+          aria-label="Select subreddit sizing metric"
         >
           <option value="subscribers">Subscribers</option>
           <option value="activeUsers">Active users</option>

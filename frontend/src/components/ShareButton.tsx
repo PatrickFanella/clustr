@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { generateShareURL, type AppState } from "../utils/urlState";
+import { useMobileDetect } from "../hooks/useMobileDetect";
 
 interface Props {
   getState: () => AppState;
@@ -11,6 +12,7 @@ interface Props {
 
 export default function ShareButton({ getState }: Props) {
   const [copied, setCopied] = useState(false);
+  const { isMobile } = useMobileDetect();
 
   const handleShare = async () => {
     try {
@@ -32,7 +34,11 @@ export default function ShareButton({ getState }: Props) {
   };
 
   return (
-    <div className="absolute z-20 top-2 left-2">
+    <div className={`absolute z-20
+      ${isMobile 
+        ? 'top-2 right-2' /* Mobile: top-right to avoid search bar */
+        : 'top-2 left-[340px]' /* Desktop: after sidebar (w-80 = 320px + padding) */
+      }`}>
       <button
         onClick={handleShare}
         className={`px-3 py-2 rounded border text-sm font-medium transition-colors shadow ${
@@ -40,9 +46,11 @@ export default function ShareButton({ getState }: Props) {
             ? "bg-green-600 border-green-400 text-white"
             : "bg-blue-600 border-blue-400 text-white hover:bg-blue-700"
         }`}
-        title="Copy shareable link to clipboard"
+        aria-label={copied ? "Link copied to clipboard" : "Share current view - Copy link to clipboard"}
+        aria-live="polite"
       >
-        {copied ? "✓ Copied!" : "📋 Share Link"}
+        <span aria-hidden="true">{copied ? "✓ " : "📋 "}</span>
+        {copied ? "Copied!" : "Share Link"}
       </button>
     </div>
   );

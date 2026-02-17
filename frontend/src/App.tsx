@@ -1,5 +1,5 @@
 import Admin from "./components/Admin";
-import Controls from "./components/Controls.tsx";
+import Sidebar from "./components/Sidebar.tsx";
 import Communities from "./components/Communities";
 import Dashboard from "./components/Dashboard";
 import Graph2D from "./components/Graph2D";
@@ -7,13 +7,16 @@ import Graph3D from "./components/Graph3D.tsx";
 import Inspector from "./components/Inspector.tsx";
 import Legend from "./components/Legend.tsx";
 import ShareButton from "./components/ShareButton.tsx";
+import SearchBar, { type SearchBarHandle } from "./components/SearchBar.tsx";
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
 import GraphErrorFallback from "./components/GraphErrorFallback.tsx";
+import KeyboardShortcutsHelp from "./components/KeyboardShortcutsHelp.tsx";
 import type { TypeFilters } from "./types/ui";
 import type { CommunityResult } from "./utils/communityDetection";
 import { readStateFromURL, writeStateToURL, type AppState } from "./utils/urlState";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { detectWebGLSupport } from "./utils/webglDetect";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 function App() {
   // Initialize state from URL if available
@@ -99,8 +102,26 @@ function App() {
     return true; // default: enabled for better depth perception
   });
   
+  const [enableAdaptiveLOD, setEnableAdaptiveLOD] = useState<boolean>(() => {
+    if (urlState.enableAdaptiveLOD !== undefined) return urlState.enableAdaptiveLOD;
+    try {
+      const saved = localStorage.getItem("enableAdaptiveLOD");
+      if (saved === "true" || saved === "false") return saved === "true";
+    } catch {
+      /* ignore */
+    }
+    return true; // default: enabled for better performance
+  });
+  
+  const [currentLODTier, setCurrentLODTier] = useState<number>(3); // Start at HIGH tier
+  
   const [camera3dRef, setCamera3dRef] = useState<{ x: number; y: number; z: number } | undefined>(urlState.camera3d);
   const [camera2dRef, setCamera2dRef] = useState<{ x: number; y: number; zoom: number } | undefined>(urlState.camera2d);
+  
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  
+  // Ref for search bar to enable focus from keyboard shortcuts
+  const searchInputRef = useRef<SearchBarHandle | null>(null);
 
   // Persist view mode
   useEffect(() => {
@@ -121,6 +142,17 @@ function App() {
       /* ignore */
     }
   }, [usePrecomputedLayout]);
+  
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "enableAdaptiveLOD",
+        enableAdaptiveLOD ? "true" : "false"
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [enableAdaptiveLOD]);
 
   // Sync state to URL with debouncing to avoid excessive history API calls
   const urlWriteTimeoutRef = useRef<number | null>(null);
@@ -143,6 +175,7 @@ function App() {
         useCommunityColors,
         usePrecomputedLayout,
         sizeAttenuation,
+        enableAdaptiveLOD,
       });
     }, 500);
 
@@ -151,7 +184,7 @@ function App() {
         clearTimeout(urlWriteTimeoutRef.current);
       }
     };
-  }, [viewMode, filters, minDegree, maxDegree, camera3dRef, camera2dRef, useCommunityColors, usePrecomputedLayout, sizeAttenuation]);
+  }, [viewMode, filters, minDegree, maxDegree, camera3dRef, camera2dRef, useCommunityColors, usePrecomputedLayout, sizeAttenuation, enableAdaptiveLOD]);
 
   // Callback to get current state for sharing
   const getShareState = useCallback((): AppState => ({
@@ -164,27 +197,115 @@ function App() {
     useCommunityColors,
     usePrecomputedLayout,
     sizeAttenuation,
-  }), [viewMode, filters, minDegree, maxDegree, camera3dRef, camera2dRef, useCommunityColors, usePrecomputedLayout, sizeAttenuation]);
+    enableAdaptiveLOD,
+  }), [viewMode, filters, minDegree, maxDegree, camera3dRef, camera2dRef, useCommunityColors, usePrecomputedLayout, sizeAttenuation, enableAdaptiveLOD]);
+
+  // Keyboard shortcut handlers
+  const handleFocusSearch = useCallback(() => {
+    if (viewMode !== "admin") {
+      searchInputRef.current?.focus();
+    }
+  }, [viewMode]);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onFocusSearch: viewMode === "admin" ? undefined : handleFocusSearch,
+    
+    // Sidebar toggle is handled in Sidebar component itself via Ctrl+B
+    
+    onSwitch3D: useCallback(() => {
+      if (viewMode !== "3d" && viewMode !== "admin") {
+        setViewMode("3d");
+      }
+    }, [viewMode]),
+    
+    onSwitch2D: useCallback(() => {
+      if (viewMode !== "2d" && viewMode !== "admin") {
+        setViewMode("2d");
+      }
+    }, [viewMode]),
+    
+    onSwitchCommunity: useCallback(() => {
+      if (viewMode !== "communities" && viewMode !== "admin") {
+        setViewMode("communities");
+      }
+    }, [viewMode]),
+    
+    onToggleLabels: useCallback(() => {
+      if (viewMode === "3d" || viewMode === "2d") {
+        setShowLabels(prev => !prev);
+      }
+    }, [viewMode]),
+    
+    onEscape: useCallback(() => {
+      // Close help overlay if open
+      if (showShortcutsHelp) {
+        setShowShortcutsHelp(false);
+        return;
+      }
+      // Otherwise deselect node
+      setSelectedId(undefined);
+      setFocusNodeId(undefined);
+    }, [showShortcutsHelp]),
+    
+    onShowHelp: useCallback(() => {
+      setShowShortcutsHelp(prev => !prev);
+    }, []),
+    
+    // Note: Fit graph, reset camera, and arrow navigation require graph instance methods
+    // These will be handled by exposing methods from Graph3D/Graph2D components
+    // For now, we'll leave them undefined and implement in a follow-up if needed
+  });
 
   return (
-    <div className="w-full h-screen">
-      {viewMode === "admin" ? (
-        <Admin
-          onViewMode={(mode: "3d" | "2d") => {
-            setViewMode(mode);
-          }}
-        />
-      ) : viewMode === "dashboard" ? (
-        <Dashboard
-          onViewMode={(mode: "3d" | "2d") => {
-            setViewMode(mode);
-          }}
-          onFocusNode={(id) => {
-            setFocusNodeId(id);
-            setSelectedId(id);
-          }}
-        />
-      ) : viewMode === "communities" ? (
+    <div className="w-full h-screen bg-white dark:bg-black transition-colors duration-200">
+      {/* Accessibility: Screen reader announcements for state changes */}
+      <div 
+        role="status" 
+        aria-live="polite" 
+        aria-atomic="true"
+        className="sr-only"
+        id="screen-reader-announcements"
+      >
+        {/* This region will be used to announce state changes to screen readers */}
+      </div>
+      
+      {/* Search bar - visible in all views except admin */}
+      {viewMode !== "admin" && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-50">
+          <SearchBar
+            ref={searchInputRef}
+            onSelectNode={(id) => {
+              setFocusNodeId(id);
+              setSelectedId(id);
+              // Switch to 3D view if not already in a graph view
+              if (viewMode === "dashboard") {
+                setViewMode("3d");
+              }
+            }}
+          />
+        </div>
+      )}
+      
+      {/* Main content area */}
+      <main id="main-content">
+        {viewMode === "admin" ? (
+          <Admin
+            onViewMode={(mode: "3d" | "2d") => {
+              setViewMode(mode);
+            }}
+          />
+        ) : viewMode === "dashboard" ? (
+          <Dashboard
+            onViewMode={(mode: "3d" | "2d") => {
+              setViewMode(mode);
+            }}
+            onFocusNode={(id) => {
+              setFocusNodeId(id);
+              setSelectedId(id);
+            }}
+          />
+        ) : viewMode === "communities" ? (
         <Communities
           onViewMode={(mode: "3d" | "2d") => {
             setViewMode(mode);
@@ -200,7 +321,7 @@ function App() {
         />
       ) : (
         <>
-          <Controls
+          <Sidebar
             filters={filters}
             onFiltersChange={setFilters}
             minDegree={minDegree}
@@ -235,6 +356,11 @@ function App() {
             onToggleSizeAttenuation={(enabled) =>
               setSizeAttenuation(enabled)
             }
+            enableAdaptiveLOD={enableAdaptiveLOD}
+            onToggleAdaptiveLOD={(enabled) =>
+              setEnableAdaptiveLOD(enabled)
+            }
+            currentLODTier={currentLODTier}
           />
           <ShareButton getState={getShareState} />
           {viewMode === "3d" ? (
@@ -269,6 +395,8 @@ function App() {
                 initialCamera={camera3dRef}
                 onCameraChange={setCamera3dRef}
                 sizeAttenuation={sizeAttenuation}
+                enableAdaptiveLOD={enableAdaptiveLOD}
+                onLODTierChange={setCurrentLODTier}
               />
             </ErrorBoundary>
           ) : (
@@ -320,7 +448,14 @@ function App() {
             }}
           />
         </>
-      )}
+        )}
+      </main>
+      
+      {/* Keyboard shortcuts help overlay */}
+      <KeyboardShortcutsHelp 
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </div>
   );
 }

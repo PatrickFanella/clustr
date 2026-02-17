@@ -10,11 +10,17 @@ import {
     ForceSimulation,
     type PhysicsConfig,
 } from '../rendering/ForceSimulation';
+import { SDFTextRenderer, type LabelData } from '../rendering/SDFTextRenderer';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { detectWebGLSupport } from '../utils/webglDetect';
+import { AdaptiveLODManager, LODTier } from '../utils/levelOfDetail';
 import LoadingSkeleton from './LoadingSkeleton';
 import NodeTooltip from './NodeTooltip';
 import PerformanceHUD from './PerformanceHUD';
+import Minimap from './Minimap';
+import { DEFAULT_LOD_CONFIG } from '../utils/levelOfDetail';
+import { useTheme } from '../contexts/ThemeContext';
+import { useMobileDetect, getMobileGraphConfig } from '../hooks/useMobileDetect';
 
 /**
  * Graph3DInstanced - High-performance 3D graph visualization using InstancedMesh
@@ -64,6 +70,13 @@ interface Props {
     initialCamera?: { x: number; y: number; z: number };
     onCameraChange?: (camera: { x: number; y: number; z: number }) => void;
     sizeAttenuation?: boolean;
+    enableAdaptiveLOD?: boolean;
+    lodConfig?: {
+        fpsDowngradeThreshold?: number;
+        fpsUpgradeThreshold?: number;
+        enableAdaptiveLOD?: boolean;
+    };
+    onLODTierChange?: (tier: number) => void;
 }
 
 export default function Graph3DInstanced(props: Props) {
@@ -76,12 +89,25 @@ export default function Graph3DInstanced(props: Props) {
         physics,
         focusNodeId,
         onNodeSelect,
+        showLabels,
         communityResult,
         usePrecomputedLayout,
         initialCamera,
         onCameraChange,
         sizeAttenuation = true,
+        enableAdaptiveLOD = true,
+        lodConfig,
+        onLODTierChange,
     } = props;
+
+    const { theme } = useTheme();
+    
+    // Mobile detection
+    const { isMobile, isTablet, isTouchDevice } = useMobileDetect();
+    const mobileConfig = useMemo(
+        () => getMobileGraphConfig(isMobile, isTablet),
+        [isMobile, isTablet]
+    );
 
     // State
     const [graphData, setGraphData] = useState<GraphData | null>(null);
@@ -90,6 +116,11 @@ export default function Graph3DInstanced(props: Props) {
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
     const [webglSupported] = useState(() => detectWebGLSupport());
     const [onlyLinked, setOnlyLinked] = useState(true);
+    const [currentLODTier, setCurrentLODTier] = useState<LODTier>(() => {
+        // Use mobile-optimized default LOD tier on mobile devices
+        return isMobile || isTablet ? LODTier.MEDIUM : LODTier.HIGH;
+    });
+    const [currentCamera, setCurrentCamera] = useState<{ x: number; y: number; z: number } | undefined>();
 
     // Refs for Three.js objects
     const containerRef = useRef<HTMLDivElement>(null);
@@ -100,10 +131,14 @@ export default function Graph3DInstanced(props: Props) {
     const nodeRendererRef = useRef<InstancedNodeRenderer | null>(null);
     const linkRendererRef = useRef<LinkRenderer | null>(null);
     const simulationRef = useRef<ForceSimulation | null>(null);
+    const labelRendererRef = useRef<SDFTextRenderer | null>(null);
     const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
     const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
     const hoveredNodeRef = useRef<string | null>(null);
-    const labelsGroupRef = useRef<THREE.Group | null>(null);
+    const showLabelsRef = useRef<boolean>(false);
+    const labelSetRef = useRef<Set<string>>(new Set());
+    const lastFrameTimeRef = useRef<number>(performance.now());
+    const lastEmittedTierRef = useRef<LODTier>(currentLODTier);
 
     // State for tooltip
     const [hoveredNode] = useState<{
@@ -114,23 +149,34 @@ export default function Graph3DInstanced(props: Props) {
         mouseY: number;
     } | null>(null);
 
+    // Use mobile-optimized limits or environment variables
     const MAX_RENDER_NODES = useMemo(() => {
+        // Check environment variable first
         const raw = import.meta.env?.VITE_MAX_RENDER_NODES as unknown as
             | string
             | number
             | undefined;
-        const n = typeof raw === 'string' ? parseInt(raw) : Number(raw);
-        return Number.isFinite(n) && (n as number) > 0 ? (n as number) : 20000;
-    }, []);
+        const envValue = typeof raw === 'string' ? parseInt(raw) : Number(raw);
+        if (Number.isFinite(envValue) && (envValue as number) > 0) {
+            return envValue as number;
+        }
+        // Fall back to mobile-optimized defaults
+        return mobileConfig.maxRenderNodes;
+    }, [mobileConfig.maxRenderNodes]);
 
     const MAX_RENDER_LINKS = useMemo(() => {
+        // Check environment variable first
         const raw = import.meta.env?.VITE_MAX_RENDER_LINKS as unknown as
             | string
             | number
             | undefined;
-        const n = typeof raw === 'string' ? parseInt(raw) : Number(raw);
-        return Number.isFinite(n) && (n as number) > 0 ? (n as number) : 50000;
-    }, []);
+        const envValue = typeof raw === 'string' ? parseInt(raw) : Number(raw);
+        if (Number.isFinite(envValue) && (envValue as number) > 0) {
+            return envValue as number;
+        }
+        // Fall back to mobile-optimized defaults
+        return mobileConfig.maxRenderLinks;
+    }, [mobileConfig.maxRenderLinks]);
 
     const activeTypes = useMemo(() => {
         const enabled = Object.entries(filters)
@@ -214,7 +260,8 @@ export default function Graph3DInstanced(props: Props) {
 
         // Create scene
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- theme is intentionally not in deps; updates handled by separate effect
+        scene.background = new THREE.Color(theme === 'dark' ? 0x000000 : 0xf8f9fa);
         sceneRef.current = scene;
 
         // Create camera
@@ -237,14 +284,31 @@ export default function Graph3DInstanced(props: Props) {
             containerRef.current.clientWidth,
             containerRef.current.clientHeight,
         );
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap for performance
+        // Use mobile-optimized pixel ratio
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobileConfig.pixelRatio));
         containerRef.current.appendChild(renderer.domElement);
         rendererRef.current = renderer;
 
-        // Create controls
+        // Create controls with touch support
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        
+        // Enable touch gestures for mobile devices
+        if (isTouchDevice) {
+            // Touch gestures configuration
+            controls.touches = {
+                ONE: THREE.TOUCH.ROTATE,      // One finger: rotate camera
+                TWO: THREE.TOUCH.DOLLY_PAN,   // Two fingers: pinch-to-zoom and pan
+            };
+            // Adjust rotation speed for touch
+            controls.rotateSpeed = 0.7;
+            // Adjust pan speed for touch
+            controls.panSpeed = 0.7;
+            // Adjust zoom speed for pinch gesture
+            controls.zoomSpeed = 1.2;
+        }
+        
         controlsRef.current = controls;
 
         // Add lights
@@ -273,10 +337,24 @@ export default function Graph3DInstanced(props: Props) {
         });
         linkRendererRef.current = linkRenderer;
 
-        // Create group for labels
-        const labelsGroup = new THREE.Group();
-        scene.add(labelsGroup);
-        labelsGroupRef.current = labelsGroup;
+        // Create SDF text label renderer
+        const labelRenderer = new SDFTextRenderer(scene, {
+            maxLabels: DEFAULT_LOD_CONFIG.maxLabels,
+            fontSize: 8,
+        });
+        labelRendererRef.current = labelRenderer;
+
+        // Initialize LOD manager
+        const lodManager = new AdaptiveLODManager();
+        if (lodConfig) {
+            lodManager.setConfig({
+                enableAdaptiveLOD: enableAdaptiveLOD && (lodConfig.enableAdaptiveLOD ?? true),
+                fpsDowngradeThreshold: lodConfig.fpsDowngradeThreshold ?? 24,
+                fpsUpgradeThreshold: lodConfig.fpsUpgradeThreshold ?? 50,
+            });
+        } else {
+            lodManager.setConfig({ enableAdaptiveLOD });
+        }
 
         // Set initial camera if provided
         if (initialCamera) {
@@ -301,6 +379,29 @@ export default function Graph3DInstanced(props: Props) {
         let animationId: number;
         const animate = () => {
             animationId = requestAnimationFrame(animate);
+            
+            // Track FPS
+            const now = performance.now();
+            const delta = now - lastFrameTimeRef.current;
+            if (delta > 0) {
+                const fps = 1000 / delta;
+                lodManager.recordFrame(fps);
+            }
+            lastFrameTimeRef.current = now;
+            
+            // Update LOD manager
+            lodManager.update(now);
+            const lodParams = lodManager.getRenderingParams(now);
+            
+            // Update LOD tier state if changed (use ref to avoid stale closure)
+            if (lodParams.tier !== lastEmittedTierRef.current) {
+                lastEmittedTierRef.current = lodParams.tier;
+                setCurrentLODTier(lodParams.tier);
+                if (onLODTierChange) {
+                    onLODTierChange(lodParams.tier);
+                }
+            }
+            
             controls.update();
 
             // Update node camera position for distance-based scaling
@@ -308,24 +409,44 @@ export default function Graph3DInstanced(props: Props) {
                 nodeRenderer.updateCameraPosition();
             }
 
-            // Update link visibility when camera moves
+            // Update link visibility and opacity based on LOD
             // updateVisibility() skips work if camera hasn't moved significantly
             // refresh() skips work if visibility hasn't changed (needsUpdate flag)
-            const now = Date.now();
+            const linkUpdateTime = Date.now();
             if (
                 linkRenderer &&
-                now - lastLinkVisibilityUpdate > LINK_VISIBILITY_UPDATE_INTERVAL
+                linkUpdateTime - lastLinkVisibilityUpdate > LINK_VISIBILITY_UPDATE_INTERVAL
             ) {
-                linkRenderer.updateVisibility(camera);
-                linkRenderer.refresh();
-                lastLinkVisibilityUpdate = now;
+                if (lodParams.showLinks) {
+                    linkRenderer.updateVisibility(camera);
+                    // Apply LOD opacity multiplier
+                    linkRenderer.setOpacity(linkOpacity * lodParams.linkOpacityMultiplier);
+                    linkRenderer.refresh();
+                } else {
+                    // Hide all links in LOW/EMERGENCY tiers
+                    linkRenderer.setOpacity(0);
+                    linkRenderer.refresh();
+                }
+                lastLinkVisibilityUpdate = linkUpdateTime;
+            }
+
+            // Update label visibility and billboard orientation
+            if (labelRendererRef.current && showLabelsRef.current && labelSetRef.current.size > 0) {
+                const cameraDistance = camera.position.length();
+                labelRendererRef.current.updateVisibility(
+                    camera,
+                    labelSetRef.current,
+                    cameraDistance,
+                    DEFAULT_LOD_CONFIG.labelVisibilityThreshold
+                );
+                labelRendererRef.current.updateBillboard(camera);
             }
 
             renderer.render(scene, camera);
 
             // Throttle camera change emissions
             if (onCameraChange) {
-                if (now - lastCameraUpdate > CAMERA_UPDATE_INTERVAL) {
+                if (linkUpdateTime - lastCameraUpdate > CAMERA_UPDATE_INTERVAL) {
                     const { x, y, z } = camera.position;
                     // Only emit if position changed significantly
                     if (
@@ -337,7 +458,7 @@ export default function Graph3DInstanced(props: Props) {
                         lastCamPos.x = x;
                         lastCamPos.y = y;
                         lastCamPos.z = z;
-                        lastCameraUpdate = now;
+                        lastCameraUpdate = linkUpdateTime;
                     }
                 }
             }
@@ -366,6 +487,13 @@ export default function Graph3DInstanced(props: Props) {
             renderer.dispose();
             nodeRenderer.dispose();
             linkRenderer.dispose();
+            
+            // Dispose label renderer
+            if (labelRendererRef.current) {
+                labelRendererRef.current.dispose();
+                labelRendererRef.current = null;
+            }
+            
             // Copy ref to variable for cleanup to avoid stale closure issue
             const container = containerRef.current;
             if (container && renderer.domElement.parentNode === container) {
@@ -379,7 +507,33 @@ export default function Graph3DInstanced(props: Props) {
         MAX_RENDER_LINKS,
         initialCamera,
         onCameraChange,
+        linkOpacity,
+        sizeAttenuation,
+        enableAdaptiveLOD,
+        lodConfig,
+        onLODTierChange,
+        // Note: mobileConfig.pixelRatio and isTouchDevice are now stable after first render
+        // since useMobileDetect computes them synchronously, so they won't trigger re-renders
+        mobileConfig.pixelRatio,
+        isTouchDevice,
     ]);
+
+    // Track camera position for minimap (update every second to match original renderer)
+    useEffect(() => {
+        if (!cameraRef.current) return;
+
+        const interval = setInterval(() => {
+            if (cameraRef.current) {
+                const { x, y, z } = cameraRef.current.position;
+                setCurrentCamera({ x, y, z });
+                if (onCameraChange) {
+                    onCameraChange({ x, y, z });
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [onCameraChange]);
 
     // Process graph data with filters
     const filtered = useMemo(() => {
@@ -455,6 +609,47 @@ export default function Graph3DInstanced(props: Props) {
         MAX_RENDER_LINKS,
     ]);
 
+    // Build degree map for label selection
+    const degreeMap = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const link of filtered.links) {
+            map.set(link.source, (map.get(link.source) || 0) + 1);
+            map.set(link.target, (map.get(link.target) || 0) + 1);
+        }
+        return map;
+    }, [filtered.links]);
+
+    // Choose nodes to label (top-N by weight, prefer subreddits/users)
+    const labelSet = useMemo(() => {
+        if (!showLabels) return new Set<string>();
+        
+        const weights = filtered.nodes.map((n) => {
+            const deg = degreeMap.get(n.id) || 0;
+            const val = typeof n.val === 'number' ? n.val : 0;
+            const w = Math.max(val, deg);
+            return { id: n.id, type: n.type, name: n.name || n.id, w };
+        });
+        
+        // Prefer subreddits/users; limit to top N by weight
+        const preferred = weights.filter(
+            (x) => x.type === 'subreddit' || x.type === 'user'
+        );
+        preferred.sort(
+            (a, b) => b.w - a.w || String(a.id).localeCompare(String(b.id))
+        );
+        
+        const TOP = Math.min(DEFAULT_LOD_CONFIG.maxLabels, preferred.length);
+        const set = new Set<string>();
+        for (let i = 0; i < TOP; i++) set.add(String(preferred[i].id));
+        return set;
+    }, [showLabels, filtered.nodes, degreeMap]);
+
+    // Keep refs in sync with labelSet and showLabels
+    useEffect(() => {
+        showLabelsRef.current = showLabels || false;
+        labelSetRef.current = labelSet;
+    }, [showLabels, labelSet]);
+
     // Update node renderer when filtered data changes
     useEffect(() => {
         if (!nodeRendererRef.current) return;
@@ -512,6 +707,38 @@ export default function Graph3DInstanced(props: Props) {
         nodeRendererRef.current.setNodeData(nodeData);
     }, [filtered, communityResult]);
 
+    // Update labels when label set or filtered data changes
+    useEffect(() => {
+        if (!labelRendererRef.current || !showLabels || labelSet.size === 0) {
+            // Clear labels if not showing
+            if (labelRendererRef.current) {
+                labelRendererRef.current.setLabels([]);
+            }
+            return;
+        }
+
+        const labelData: LabelData[] = filtered.nodes
+            .filter(n => labelSet.has(n.id))
+            .map(n => {
+                const deg = degreeMap.get(n.id) || 1;
+                const base = Math.max(2, Math.pow(deg, 0.35));
+                const size = (6 + Math.min(10, base)) / 8; // Normalize to fontSize multiplier
+                
+                return {
+                    id: n.id,
+                    text: n.name || n.id,
+                    position: {
+                        x: n.x || 0,
+                        y: n.y || 0,
+                        z: n.z || 0,
+                    },
+                    size,
+                };
+            });
+
+        labelRendererRef.current.setLabels(labelData);
+    }, [filtered.nodes, labelSet, degreeMap, showLabels]);
+
     // Initialize/update force simulation
     useEffect(() => {
         if (!nodeRendererRef.current) return;
@@ -526,6 +753,9 @@ export default function Graph3DInstanced(props: Props) {
                     if (linkRendererRef.current) {
                         linkRendererRef.current.updatePositions(positions);
                         linkRendererRef.current.refresh();
+                    }
+                    if (labelRendererRef.current && showLabels) {
+                        labelRendererRef.current.updatePositions(positions);
                     }
                 },
                 physics,
@@ -542,7 +772,7 @@ export default function Graph3DInstanced(props: Props) {
                 simulationRef.current.stop();
             }
         };
-    }, [filtered, physics, usePrecomputedLayout]);
+    }, [filtered, physics, usePrecomputedLayout, showLabels]);
 
     // Update physics when it changes
     useEffect(() => {
@@ -680,6 +910,12 @@ export default function Graph3DInstanced(props: Props) {
         }
     }, [focusNodeId, filtered]);
 
+    // Update scene background color when theme changes
+    useEffect(() => {
+        if (!sceneRef.current) return;
+        sceneRef.current.background = new THREE.Color(theme === 'dark' ? 0x000000 : 0xf8f9fa);
+    }, [theme]);
+
     // Show loading skeleton during initial load
     if (loading && !initialLoadComplete) {
         return <LoadingSkeleton />;
@@ -758,7 +994,46 @@ export default function Graph3DInstanced(props: Props) {
                 nodeCount={filtered.nodes.length}
                 totalNodeCount={graphData?.nodes.length || 0}
                 simulationState={usePrecomputedLayout ? 'precomputed' : 'active'}
-                lodLevel={0}
+                lodLevel={currentLODTier}
+            />
+            <Minimap
+                cameraPosition={currentCamera}
+                communityResult={communityResult as import('../utils/communityDetection').CommunityResult | null}
+                nodes={filtered.nodes}
+                onCameraMove={(position) => {
+                    if (cameraRef.current && controlsRef.current) {
+                        // Smooth camera animation using GSAP-like approach
+                        const startPos = {
+                            x: cameraRef.current.position.x,
+                            y: cameraRef.current.position.y,
+                            z: cameraRef.current.position.z,
+                        };
+                        const duration = 1000; // 1 second animation
+                        const startTime = Date.now();
+
+                        const animateCamera = () => {
+                            const elapsed = Date.now() - startTime;
+                            const progress = Math.min(elapsed / duration, 1);
+                            
+                            // Ease-out cubic easing
+                            const eased = 1 - Math.pow(1 - progress, 3);
+                            
+                            cameraRef.current!.position.x = startPos.x + (position.x - startPos.x) * eased;
+                            cameraRef.current!.position.y = startPos.y + (position.y - startPos.y) * eased;
+                            cameraRef.current!.position.z = startPos.z + (position.z - startPos.z) * eased;
+                            
+                            if (progress < 1) {
+                                requestAnimationFrame(animateCamera);
+                            } else {
+                                // Update controls target and state at the end
+                                controlsRef.current!.target.set(0, 0, 0);
+                                controlsRef.current!.update();
+                            }
+                        };
+
+                        animateCamera();
+                    }
+                }}
             />
         </div>
     );

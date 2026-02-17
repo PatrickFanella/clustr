@@ -7,7 +7,7 @@ import type {
 } from "react-force-graph-3d";
 import ForceGraph3D from "react-force-graph-3d";
 import type { GraphData, GraphNode, GraphLink } from "../types/graph";
-import SpriteText from "three-spritetext";
+import type { CommunityResult } from "../utils/communityDetection";
 import { FrameThrottler } from "../utils/frameThrottle";
 import {
   calculateLinkOpacity,
@@ -15,6 +15,7 @@ import {
   DEFAULT_LOD_CONFIG,
 } from "../utils/levelOfDetail";
 import { EdgeBundler } from "../rendering/EdgeBundler";
+import { SDFTextRenderer, type LabelData } from "../rendering/SDFTextRenderer";
 import * as THREE from "three";
 import type { WebGLRenderer } from "three";
 import LoadingSkeleton from "./LoadingSkeleton";
@@ -23,6 +24,8 @@ import Graph3DInstanced from "./Graph3DInstanced";
 import { StreamingGraphLoader, type LoadProgress } from "../data/StreamingGraphLoader";
 import LoadingProgress from "./LoadingProgress";
 import PerformanceHUD from "./PerformanceHUD";
+import Minimap from "./Minimap";
+import { useTheme } from "../contexts/ThemeContext";
 
 type Filters = {
   subreddit: boolean;
@@ -281,6 +284,8 @@ interface Props {
   initialCamera?: { x: number; y: number; z: number };
   onCameraChange?: (camera: { x: number; y: number; z: number }) => void;
   sizeAttenuation?: boolean;
+  enableAdaptiveLOD?: boolean;
+  onLODTierChange?: (tier: number) => void;
 }
 
 export default function Graph3D(props: Props) {
@@ -295,11 +300,23 @@ export default function Graph3D(props: Props) {
 
   // Use the new instanced renderer if enabled
   // This must be done without early return to satisfy React hooks rules
-  return useInstancedRenderer ? <Graph3DInstanced {...props} /> : <Graph3DOriginal {...props} />;
+  // Only pass LOD props to instanced renderer since original renderer doesn't support them
+  if (useInstancedRenderer) {
+    return <Graph3DInstanced {...props} />;
+  }
+  
+  // Extract and exclude LOD-specific props for the original renderer
+  const { 
+    enableAdaptiveLOD: _enableAdaptiveLOD, 
+    onLODTierChange: _onLODTierChange, 
+    ...propsWithoutLOD 
+  } = props;
+  return <Graph3DOriginal {...propsWithoutLOD} />;
 }
 
 // Original implementation extracted to separate component
-function Graph3DOriginal(props: Props) {
+// Uses a subset of Props - doesn't support enableAdaptiveLOD or onLODTierChange
+function Graph3DOriginal(props: Omit<Props, 'enableAdaptiveLOD' | 'onLODTierChange'>) {
   const {
     filters,
     minDegree,
@@ -318,6 +335,7 @@ function Graph3DOriginal(props: Props) {
     onCameraChange,
   } = props;
 
+  const { theme } = useTheme();
   const [onlyLinked, setOnlyLinked] = useState(true);
   const [useBundling, setUseBundling] = useState(false);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
@@ -335,6 +353,8 @@ function Graph3DOriginal(props: Props) {
   const [adaptiveLinkOpacity, setAdaptiveLinkOpacity] = useState(linkOpacity);
   const [adaptiveShowLabels, setAdaptiveShowLabels] = useState(showLabels);
   const bundleMeshesRef = useRef<THREE.Mesh[]>([]);
+  const labelRendererRef = useRef<SDFTextRenderer | null>(null);
+  const [currentCamera, setCurrentCamera] = useState<{ x: number; y: number; z: number } | undefined>();
 
   const MAX_RENDER_NODES = useMemo(() => {
     const raw = import.meta.env?.VITE_MAX_RENDER_NODES as unknown as
@@ -605,6 +625,7 @@ function Graph3DOriginal(props: Props) {
           Math.abs(z - lastCamPos.z) > EPSILON
         ) {
           onCameraChange({ x, y, z });
+          setCurrentCamera({ x, y, z });
           lastCamPos.x = x;
           lastCamPos.y = y;
           lastCamPos.z = z;
@@ -1013,6 +1034,92 @@ function Graph3DOriginal(props: Props) {
     };
   }, [useBundling, communityResult, filtered, edgeBundler, adaptiveLinkOpacity]);
 
+  // Effect to manage SDF text labels
+  useEffect(() => {
+    if (!fgRef.current || !adaptiveShowLabels) {
+      // Clean up labels if not showing
+      if (labelRendererRef.current) {
+        labelRendererRef.current.dispose();
+        labelRendererRef.current = null;
+      }
+      return;
+    }
+
+    const scene = (fgRef.current as any)?.scene?.();
+    if (!scene) return;
+
+    // Initialize label renderer if needed
+    if (!labelRendererRef.current) {
+      labelRendererRef.current = new SDFTextRenderer(scene, {
+        maxLabels: DEFAULT_LOD_CONFIG.maxLabels,
+        fontSize: 8,
+      });
+    }
+
+    // Build label data once when dependencies change
+    const graphData = (fgRef.current as any)?.graphData?.();
+    if (!graphData?.nodes) {
+      return;
+    }
+
+    // Create label data from nodes with positions
+    const labelData: LabelData[] = [];
+    for (const node of graphData.nodes as GraphNode[]) {
+      if (
+        labelSet.has(node.id) &&
+        typeof node.x === 'number' &&
+        typeof node.y === 'number' &&
+        typeof node.z === 'number'
+      ) {
+        const deg = degreeMap.get(node.id) || 1;
+        const base = Math.max(2, Math.pow(deg, 0.35));
+        const size = (6 + Math.min(10, base)) / 8;
+
+        labelData.push({
+          id: node.id,
+          text: node.name || node.id,
+          position: { x: node.x, y: node.y, z: node.z },
+          size,
+        });
+      }
+    }
+
+    labelRendererRef.current.setLabels(labelData);
+
+    // Set up animation loop for visibility and billboard updates only
+    let animationId: number;
+    const animate = () => {
+      if (!labelRendererRef.current || !fgRef.current) return;
+
+      const camera = (fgRef.current as any)?.camera?.();
+      if (camera) {
+        const cameraDistance = Math.sqrt(
+          camera.position.x ** 2 +
+          camera.position.y ** 2 +
+          camera.position.z ** 2
+        );
+        labelRendererRef.current.updateVisibility(
+          camera,
+          labelSet,
+          cameraDistance,
+          DEFAULT_LOD_CONFIG.labelVisibilityThreshold
+        );
+        labelRendererRef.current.updateBillboard(camera);
+      }
+
+      animationId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      if (labelRendererRef.current) {
+        labelRendererRef.current.dispose();
+        labelRendererRef.current = null;
+      }
+    };
+  }, [adaptiveShowLabels, filtered, labelSet, degreeMap]);
+
   // Show loading skeleton during initial load
   if (isLoading && !initialLoadComplete) {
     return <LoadingSkeleton />;
@@ -1131,34 +1238,13 @@ function Graph3DOriginal(props: Props) {
         nodeColor={getColor as unknown as (node: unknown) => string}
         nodeVal={nodeValFn as unknown as (n: unknown) => number}
         nodeRelSize={nodeRelSize}
-        nodeThreeObject={
-          (adaptiveShowLabels
-            ? (node: unknown) => {
-                const n = node as GraphNode;
-                const id = String(n.id);
-                if (!labelSet.has(id)) return undefined;
-                const name = (n.name || id).toString();
-                const st = new SpriteText(
-                  name.length > 28 ? name.slice(0, 27) + "…" : name
-                );
-                st.color = "#ffffff";
-                // scale label size with node value moderately
-                const deg = degreeMap.get(id) || 1;
-                const base = Math.max(2, Math.pow(deg, 0.35));
-                st.textHeight = 6 + Math.min(10, base);
-                st.backgroundColor = "rgba(0,0,0,0.35)";
-                st.padding = 2;
-                return st;
-              }
-            : undefined) as any
-        }
         linkWidth={1}
         linkColor={() => "#999"}
         linkOpacity={adaptiveLinkOpacity}
         onNodeClick={(node: unknown) =>
           onNodeSelect?.((node as { name?: string })?.name)
         }
-        backgroundColor="#000000"
+        backgroundColor={theme === 'dark' ? '#000000' : '#f8f9fa'}
         enableNodeDrag={false}
         linkDirectionalParticles={0}
         linkDirectionalArrowLength={0}
@@ -1180,6 +1266,14 @@ function Graph3DOriginal(props: Props) {
         totalNodeCount={graphData?.nodes.length || 0}
         simulationState={usePrecomputedLayout && hasPrecomputedPositions ? 'precomputed' : 'active'}
         lodLevel={0}
+      />
+      <Minimap
+        cameraPosition={currentCamera}
+        communityResult={communityResult as CommunityResult | null}
+        nodes={filtered.nodes}
+        onCameraMove={(position) => {
+          fgRef.current?.cameraPosition?.(position, { x: 0, y: 0, z: 0 }, 1000);
+        }}
       />
     </div>
   );
