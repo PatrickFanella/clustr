@@ -1,6 +1,6 @@
 # Visualization Modes
 
-This document describes the different visualization modes available in the Reddit Cluster Map frontend.
+This document describes the different visualization modes available in the Clustr frontend.
 
 ## Overview
 

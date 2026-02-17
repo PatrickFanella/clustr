@@ -204,7 +204,7 @@ export default function Dashboard({ onViewMode, onFocusNode }: DashboardProps) {
     <div className="w-full h-screen bg-gray-900 text-white overflow-auto p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Reddit Cluster Map - Dashboard</h1>
+          <h1 className="text-3xl font-bold">Clustr - Dashboard</h1>
           <div className="flex gap-2">
             <button
               onClick={() => onViewMode?.("3d")}

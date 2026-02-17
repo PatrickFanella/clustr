@@ -1,6 +1,6 @@
 # Security Features
 
-This document describes the security features implemented in the reddit-cluster-map API.
+This document describes the security features implemented in the Clustr API.
 
 ## Overview
 
@@ -67,7 +67,7 @@ services:
 
 **Option 2: Kubernetes Secrets**
 ```bash
-kubectl create secret generic reddit-cluster-secrets \
+kubectl create secret generic clustr-secrets \
   --from-literal=reddit-client-id=xxx \
   --from-literal=reddit-client-secret=xxx \
   --from-literal=postgres-password=xxx \

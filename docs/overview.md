@@ -1,4 +1,4 @@
-# Reddit Cluster Map — System Overview
+# Clustr — System Overview
 
 This document explains the end-to-end data flow, components, and how they interconnect. Use this as your mental model before diving into code.
 

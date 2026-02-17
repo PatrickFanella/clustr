@@ -1,7 +1,7 @@
 # Physics Stabilization Implementation Summary
 
 ## Overview
-This PR implements comprehensive physics stabilization for the Reddit Cluster Map visualization to prevent runaway nodes and ensure reliable convergence for graphs of any size (1k to 100k+ nodes).
+This PR implements comprehensive physics stabilization for the Clustr visualization to prevent runaway nodes and ensure reliable convergence for graphs of any size (1k to 100k+ nodes).
 
 ## Problem Solved
 Before this change:

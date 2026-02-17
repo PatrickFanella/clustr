@@ -141,7 +141,7 @@ export default function Graph3DInstanced(props: Props) {
     const lastEmittedTierRef = useRef<LODTier>(currentLODTier);
 
     // State for tooltip
-    const [hoveredNode] = useState<{
+    const [hoveredNode, setHoveredNode] = useState<{
         id: string;
         name?: string;
         type?: string;
@@ -493,6 +493,12 @@ export default function Graph3DInstanced(props: Props) {
                 labelRendererRef.current.dispose();
                 labelRendererRef.current = null;
             }
+
+            // Dispose simulation (terminates Web Worker)
+            if (simulationRef.current) {
+                simulationRef.current.dispose();
+                simulationRef.current = null;
+            }
             
             // Copy ref to variable for cleanup to avoid stale closure issue
             const container = containerRef.current;
@@ -518,7 +524,7 @@ export default function Graph3DInstanced(props: Props) {
         isTouchDevice,
     ]);
 
-    // Track camera position for minimap (update every second to match original renderer)
+    // Track camera position for minimap state
     useEffect(() => {
         if (!cameraRef.current) return;
 
@@ -526,14 +532,11 @@ export default function Graph3DInstanced(props: Props) {
             if (cameraRef.current) {
                 const { x, y, z } = cameraRef.current.position;
                 setCurrentCamera({ x, y, z });
-                if (onCameraChange) {
-                    onCameraChange({ x, y, z });
-                }
             }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [onCameraChange]);
+    }, []);
 
     // Process graph data with filters
     const filtered = useMemo(() => {
@@ -546,9 +549,14 @@ export default function Graph3DInstanced(props: Props) {
         );
 
         let nodes = graphData.nodes.filter(n => !n.type || allowed.has(n.type));
-        let links = graphData.links;
 
-        // Apply degree filters if specified
+        // Filter links to only include those between visible node types
+        let nodeIds = new Set(nodes.map(n => n.id));
+        let links = graphData.links.filter(
+            l => nodeIds.has(l.source) && nodeIds.has(l.target),
+        );
+
+        // Apply degree filters (now using correctly-scoped links)
         if (minDegree !== undefined || maxDegree !== undefined) {
             const degreeMap = new Map<string, number>();
             for (const link of links) {
@@ -568,12 +576,13 @@ export default function Graph3DInstanced(props: Props) {
                 if (maxDegree !== undefined && degree > maxDegree) return false;
                 return true;
             });
-        }
 
-        const nodeIds = new Set(nodes.map(n => n.id));
-        links = links.filter(
-            l => nodeIds.has(l.source) && nodeIds.has(l.target),
-        );
+            // Re-filter links after removing nodes
+            nodeIds = new Set(nodes.map(n => n.id));
+            links = links.filter(
+                l => nodeIds.has(l.source) && nodeIds.has(l.target),
+            );
+        }
 
         // Filter to only linked nodes if enabled
         if (onlyLinked) {
@@ -608,6 +617,15 @@ export default function Graph3DInstanced(props: Props) {
         MAX_RENDER_NODES,
         MAX_RENDER_LINKS,
     ]);
+
+    // Build node lookup map for O(1) access by ID
+    const nodeById = useMemo(() => {
+        const map = new Map<string, (typeof filtered.nodes)[0]>();
+        for (const node of filtered.nodes) {
+            map.set(node.id, node);
+        }
+        return map;
+    }, [filtered.nodes]);
 
     // Build degree map for label selection
     const degreeMap = useMemo(() => {
@@ -754,7 +772,7 @@ export default function Graph3DInstanced(props: Props) {
                         linkRendererRef.current.updatePositions(positions);
                         linkRendererRef.current.refresh();
                     }
-                    if (labelRendererRef.current && showLabels) {
+                    if (labelRendererRef.current && showLabelsRef.current) {
                         labelRendererRef.current.updatePositions(positions);
                     }
                 },
@@ -772,7 +790,8 @@ export default function Graph3DInstanced(props: Props) {
                 simulationRef.current.stop();
             }
         };
-    }, [filtered, physics, usePrecomputedLayout, showLabels]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- showLabels accessed via ref to avoid simulation restart
+    }, [filtered, physics, usePrecomputedLayout]);
 
     // Update physics when it changes
     useEffect(() => {
@@ -846,23 +865,28 @@ export default function Graph3DInstanced(props: Props) {
                 hoveredNodeRef.current = nodeId;
                 container.style.cursor = nodeId ? 'pointer' : 'default';
 
-                // Could trigger tooltip here
                 if (nodeId) {
-                    const node = filtered.nodes.find(n => n.id === nodeId);
+                    const node = nodeById.get(nodeId);
                     if (node) {
                         container.title = node.name || node.id;
+                        setHoveredNode({
+                            id: nodeId,
+                            name: node.name,
+                            type: node.type,
+                            mouseX: event.clientX,
+                            mouseY: event.clientY,
+                        });
                     }
                 } else {
                     container.title = '';
+                    setHoveredNode(null);
                 }
             }
         };
 
         const handleClick = () => {
             if (hoveredNodeRef.current && onNodeSelect) {
-                const node = filtered.nodes.find(
-                    n => n.id === hoveredNodeRef.current,
-                );
+                const node = nodeById.get(hoveredNodeRef.current);
                 onNodeSelect(node?.name || hoveredNodeRef.current);
             }
         };
@@ -874,7 +898,7 @@ export default function Graph3DInstanced(props: Props) {
             container.removeEventListener('mousemove', handleMouseMove);
             container.removeEventListener('click', handleClick);
         };
-    }, [filtered, onNodeSelect]);
+    }, [nodeById, onNodeSelect]);
 
     // Focus camera on node
     useEffect(() => {
@@ -1012,22 +1036,23 @@ export default function Graph3DInstanced(props: Props) {
                         const startTime = Date.now();
 
                         const animateCamera = () => {
+                            if (!cameraRef.current || !controlsRef.current) return;
+
                             const elapsed = Date.now() - startTime;
                             const progress = Math.min(elapsed / duration, 1);
-                            
+
                             // Ease-out cubic easing
                             const eased = 1 - Math.pow(1 - progress, 3);
-                            
-                            cameraRef.current!.position.x = startPos.x + (position.x - startPos.x) * eased;
-                            cameraRef.current!.position.y = startPos.y + (position.y - startPos.y) * eased;
-                            cameraRef.current!.position.z = startPos.z + (position.z - startPos.z) * eased;
-                            
+
+                            cameraRef.current.position.x = startPos.x + (position.x - startPos.x) * eased;
+                            cameraRef.current.position.y = startPos.y + (position.y - startPos.y) * eased;
+                            cameraRef.current.position.z = startPos.z + (position.z - startPos.z) * eased;
+
                             if (progress < 1) {
                                 requestAnimationFrame(animateCamera);
                             } else {
-                                // Update controls target and state at the end
-                                controlsRef.current!.target.set(0, 0, 0);
-                                controlsRef.current!.update();
+                                controlsRef.current.target.set(0, 0, 0);
+                                controlsRef.current.update();
                             }
                         };
 

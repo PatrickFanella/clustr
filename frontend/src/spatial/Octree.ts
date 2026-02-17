@@ -490,11 +490,15 @@ export class Octree<T> {
         if (node.isLeaf()) {
             node.items.push(item);
 
-            // Check if we should subdivide
+            // Check if we should subdivide (inline diagonal length to avoid allocation)
+            const dx = node.bounds.max.x - node.bounds.min.x;
+            const dy = node.bounds.max.y - node.bounds.min.y;
+            const dz = node.bounds.max.z - node.bounds.min.z;
+            const diag = Math.sqrt(dx * dx + dy * dy + dz * dz);
             const shouldSubdivide =
                 node.items.length > this.config.maxItemsPerNode &&
                 node.depth < this.config.maxDepth &&
-                node.bounds.getSize().length() > this.config.minCellSize;
+                diag > this.config.minCellSize;
 
             if (shouldSubdivide) {
                 node.subdivide();
@@ -574,27 +578,18 @@ export class Octree<T> {
         let currentMaxDistance = maxDistance;
 
         // Check items in this node - compute actual ray distance
+        const pickRadiusSq = 100; // 10 * 10, adjust based on node sizes
         for (const item of node.items) {
-            // Project point onto ray to get distance along ray
-            const directionDot = ray.direction.dot(
-                target.subVectors(item.position, ray.origin)
-            );
-            
+            // Project point onto ray to get distance along ray (no allocations)
+            target.subVectors(item.position, ray.origin);
+            const directionDot = ray.direction.dot(target);
+
             if (directionDot > 0 && directionDot <= currentMaxDistance) {
-                // Get closest point on ray
-                const closestPoint = ray.origin.clone().addScaledVector(
-                    ray.direction,
-                    directionDot
-                );
-                
-                // Check perpendicular distance (as a pick radius)
-                const perpDistance = closestPoint.distanceTo(item.position);
-                
-                // Use a small pick radius based on typical node sizes
-                const pickRadius = 10; // Adjust based on your node sizes
-                
-                if (perpDistance <= pickRadius) {
-                    // Use distance along ray for ordering
+                // Perpendicular distance squared = |toItem|² - projectedDist²
+                const distSq = target.lengthSq();
+                const perpDistSq = distSq - directionDot * directionDot;
+
+                if (perpDistSq <= pickRadiusSq) {
                     currentMaxDistance = callback(item, directionDot);
                 }
             }
@@ -682,17 +677,29 @@ export class Octree<T> {
     private expandRoot(position: THREE.Vector3): void {
         if (!this.root) return;
 
-        // Keep expanding until position is contained
-        while (!this.root.bounds.containsPoint(position)) {
+        // Guard against NaN/Infinity which would cause infinite loop
+        if (
+            !isFinite(position.x) ||
+            !isFinite(position.y) ||
+            !isFinite(position.z)
+        ) {
+            return;
+        }
+
+        // Keep expanding until position is contained (max 20 doublings as safety)
+        let iterations = 0;
+        while (!this.root.bounds.containsPoint(position) && iterations < 20) {
+            iterations++;
+            const root = this.root;
             // Double the size of the root bounds
-            const center = this.root.bounds.getCenter();
-            const size = this.root.bounds.getSize();
+            const center: THREE.Vector3 = root.bounds.getCenter();
+            const size: THREE.Vector3 = root.bounds.getSize();
             const maxSize = Math.max(size.x, size.y, size.z);
 
             const newSize = maxSize * 2;
             const halfSize = newSize / 2;
 
-            const newMin = new THREE.Vector3(
+            const newMin: THREE.Vector3 = new THREE.Vector3(
                 center.x - halfSize,
                 center.y - halfSize,
                 center.z - halfSize,
@@ -703,7 +710,7 @@ export class Octree<T> {
                 center.z + halfSize,
             );
 
-            const newRoot = new OctreeNode<T>(new AABB(newMin, newMax), 0);
+            const newRoot: OctreeNode<T> = new OctreeNode<T>(new AABB(newMin, newMax), 0);
 
             // Reinsert all items into new root
             const allItems = this.getAllItems();

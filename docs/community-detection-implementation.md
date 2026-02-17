@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the community detection feature implementation for the Reddit Cluster Map project.
+This document summarizes the community detection feature implementation for the Clustr project.
 
 ## What Was Built
 
@@ -295,4 +295,4 @@ This implementation provides a complete, production-ready community detection sy
 - ✅ Comprehensive documentation
 - ✅ Extensible architecture
 
-The feature adds significant analytical value to the Reddit Cluster Map, enabling users to discover natural groupings and understand network structure at a deeper level.
+The feature adds significant analytical value to the Clustr, enabling users to discover natural groupings and understand network structure at a deeper level.

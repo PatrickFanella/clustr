@@ -14,8 +14,8 @@ UNION ALL
 SELECT
     'link' as data_type,
     CAST(id AS TEXT),
-    NULL as name,
-    CAST(NULL AS TEXT) as val,
+    '' as name,
+    '' as val,
     NULL as type,
     NULL as pos_x,
     NULL as pos_y,
@@ -62,8 +62,8 @@ UNION ALL
 SELECT
         'link' AS data_type,
         CAST(l.id AS TEXT),
-        NULL AS name,
-        CAST(NULL AS TEXT) AS val,
+        '' AS name,
+        '' AS val,
         NULL AS type,
     NULL as pos_x,
     NULL as pos_y,
@@ -111,8 +111,8 @@ UNION ALL
 SELECT
         'link' AS data_type,
         CAST(l.id AS TEXT),
-        NULL AS name,
-        CAST(NULL AS TEXT) AS val,
+        '' AS name,
+        '' AS val,
         NULL AS type,
     NULL as pos_x,
     NULL as pos_y,
@@ -136,8 +136,8 @@ UNION ALL
 SELECT
     'link' as data_type,
     CAST(id AS TEXT),
-    NULL as name,
-    CAST(NULL AS TEXT) as val,
+    '' as name,
+    '' as val,
     NULL as type,
     source,
     target
@@ -401,7 +401,7 @@ ORDER BY size DESC;
 SELECT
     'link' as data_type,
     CAST(gcl.source_community_id || '_' || gcl.target_community_id AS TEXT) as id,
-    NULL as name,
+    '' as name,
     CAST(gcl.weight AS TEXT) as val,
     NULL as type,
     NULL as pos_x,
@@ -435,8 +435,8 @@ UNION ALL
 SELECT
     'link' as data_type,
     CAST(gl.id AS TEXT),
-    NULL as name,
-    CAST(NULL AS TEXT) as val,
+    '' as name,
+    '' as val,
     NULL as type,
     NULL as pos_x,
     NULL as pos_y,

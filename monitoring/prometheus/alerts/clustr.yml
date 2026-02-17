@@ -1,5 +1,5 @@
 groups:
-  - name: reddit_cluster_map_alerts
+  - name: clustr_alerts
     interval: 30s
     rules:
       # API Error Rate

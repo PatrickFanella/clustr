@@ -1,4 +1,4 @@
-# Copilot Instructions — Reddit Cluster Map
+# Copilot Instructions — Clustr
 
 > These instructions apply to **all Copilot agents** (Chat, Edits, Coding Agent) working
 > in this repository. Keep them in sync with the codebase; if you change an architectural
@@ -8,7 +8,7 @@
 
 ## 1 · Project overview
 
-Reddit Cluster Map crawls Reddit, stores normalized data in PostgreSQL, precomputes a
+Clustr crawls Reddit, stores normalized data in PostgreSQL, precomputes a
 relationship graph, and serves it to an interactive React frontend.
 
 **Current status:** v0.1.0 — MVP feature-complete (Milestones M1–M4 done).
@@ -229,14 +229,14 @@ Reference issue numbers: `Closes #123` or `Part of #138`.
 ### Docker services
 
 The `docker-compose.yml` in `backend/` brings up:
-- `reddit-cluster-db` (Postgres 17, port 5432)
-- `reddit-cluster-api` (Go API server, port 8000)
-- `reddit-cluster-crawler` (Go crawler)
-- `reddit-cluster-precalculate` (hourly precalc + backup)
-- `reddit-cluster-frontend` (Nginx + Vite build)
-- `reddit-cluster-prometheus` (port 9090)
-- `reddit-cluster-grafana` (port 3000)
-- `reddit-cluster-backup` (daily DB backups)
+- `clustr-db` (Postgres 17, port 5432)
+- `clustr-api` (Go API server, port 8000)
+- `clustr-crawler` (Go crawler)
+- `clustr-precalculate` (hourly precalc + backup)
+- `clustr-frontend` (Nginx + Vite build)
+- `clustr-prometheus` (port 9090)
+- `clustr-grafana` (port 3000)
+- `clustr-backup` (daily DB backups)
 
 Network: `web` (external). All services use `restart: unless-stopped`.
 

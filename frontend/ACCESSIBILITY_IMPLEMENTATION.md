@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation adds comprehensive WCAG 2.1 Level AA accessibility compliance to the Reddit Cluster Map application. All non-WebGL UI elements are now fully accessible to keyboard users, screen reader users, and users with visual impairments.
+This implementation adds comprehensive WCAG 2.1 Level AA accessibility compliance to the Clustr application. All non-WebGL UI elements are now fully accessible to keyboard users, screen reader users, and users with visual impairments.
 
 ## Implementation Details
 

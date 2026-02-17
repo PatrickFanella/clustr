@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation adds comprehensive data integrity checking, backfill support, and database maintenance capabilities to the Reddit Cluster Map project.
+This implementation adds comprehensive data integrity checking, backfill support, and database maintenance capabilities to the Clustr project.
 
 ## Issue Addressed
 
@@ -261,7 +261,7 @@ Potential improvements for future iterations:
 
 ## Conclusion
 
-This implementation provides a robust foundation for maintaining data integrity in the Reddit Cluster Map project. It includes:
+This implementation provides a robust foundation for maintaining data integrity in the Clustr project. It includes:
 
 ✅ Comprehensive integrity checks  
 ✅ Safe cleanup operations  

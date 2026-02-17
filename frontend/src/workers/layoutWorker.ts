@@ -79,9 +79,8 @@ let nodes: SimNode[] = [];
 let links: SimLink[] = [];
 let hasPrecomputedPositions = false;
 
-// Reusable ping-pong buffers to avoid allocating a new Float32Array every tick
-let positionBuffers: Float32Array[] = [];
-let currentPositionBufferIndex = 0;
+// Reusable position buffer - not transferred, just structured-cloned to avoid neutering
+let positionBuffer: Float32Array | null = null;
 
 /**
  * Initialize simulation with graph data
@@ -148,11 +147,16 @@ function initSimulation(message: InitMessage): void {
   
   simulation.velocityDecay(physics.velocityDecay);
   
-  // Set up tick handler
+  // Set up tick and end handlers
   simulation.on('tick', () => {
     sendPositions();
   });
-  
+
+  simulation.on('end', () => {
+    sendPositions();
+    self.postMessage({ type: 'end' });
+  });
+
   simulation.alpha(1).restart();
 }
 
@@ -226,51 +230,36 @@ function stopSimulation(): void {
 }
 
 /**
- * Send current positions to main thread using transferable Float32Array
- * Format: [x1, y1, z1, x2, y2, z2, ...] with node IDs in same order as received
- * Uses ping-pong buffers to avoid allocating new arrays every tick
+ * Send current positions to main thread via structured clone.
+ * Format: [x1, y1, z1, x2, y2, z2, ...] with node IDs in same order as received.
+ * Uses a single reusable buffer (no transferable to avoid neutering issues).
  */
 function sendPositions(): void {
   if (nodes.length === 0) return;
-  
-  const requiredLength = nodes.length * 3; // 3 floats per node (x, y, z)
-  
-  // Initialize or resize ping-pong buffers when node count changes
-  const needsInitOrResize =
-    positionBuffers.length !== 2 ||
-    positionBuffers[0].length !== requiredLength ||
-    positionBuffers[1].length !== requiredLength;
-  
-  if (needsInitOrResize) {
-    positionBuffers = [
-      new Float32Array(requiredLength),
-      new Float32Array(requiredLength),
-    ];
-    currentPositionBufferIndex = 0;
+
+  const requiredLength = nodes.length * 3;
+
+  if (!positionBuffer || positionBuffer.length !== requiredLength) {
+    positionBuffer = new Float32Array(requiredLength);
   }
-  
-  const buffer = positionBuffers[currentPositionBufferIndex];
-  
+
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     const baseIndex = i * 3;
-    buffer[baseIndex] = node.x ?? 0;
-    buffer[baseIndex + 1] = node.y ?? 0;
-    buffer[baseIndex + 2] = node.z ?? 0;
+    positionBuffer[baseIndex] = node.x ?? 0;
+    positionBuffer[baseIndex + 1] = node.y ?? 0;
+    positionBuffer[baseIndex + 2] = node.z ?? 0;
   }
-  
+
   const message: PositionsMessage = {
     type: 'positions',
-    positions: buffer,
+    positions: positionBuffer,
     alpha: simulation?.alpha() ?? 0,
     nodeCount: nodes.length,
   };
-  
-  // Transfer ownership of the buffer to avoid copying (use structured clone transfer)
-  self.postMessage(message, { transfer: [buffer.buffer] });
-  
-  // Flip to the other buffer for the next tick
-  currentPositionBufferIndex = currentPositionBufferIndex === 0 ? 1 : 0;
+
+  // Structured clone copies the data; worker keeps the buffer for reuse
+  self.postMessage(message);
 }
 
 /**

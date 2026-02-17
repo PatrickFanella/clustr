@@ -1,6 +1,6 @@
 # Community Detection
 
-This document explains the community detection feature in the Reddit Cluster Map application.
+This document explains the community detection feature in the Clustr application.
 
 ## Overview
 

@@ -1,6 +1,6 @@
 # Frontend (Vite + React 3D)
 
-This app renders the Reddit Cluster Map using `react-force-graph-3d`.
+This app renders the Clustr using `react-force-graph-3d`.
 
 ## Dev commands
 

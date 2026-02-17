@@ -1,6 +1,6 @@
 # OAuth Token Management
 
-This document describes the OAuth token management implementation for the Reddit Cluster Map project.
+This document describes the OAuth token management implementation for the Clustr project.
 
 ## Overview
 

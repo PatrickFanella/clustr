@@ -1,6 +1,6 @@
 # Analytics and Monitoring Guide
 
-This guide explains how to use the analytics and monitoring infrastructure for the Reddit Cluster Map project.
+This guide explains how to use the analytics and monitoring infrastructure for the Clustr project.
 
 ## Overview
 
@@ -115,7 +115,7 @@ This will start:
 
 ### System Overview Dashboard
 
-The main dashboard (`Reddit Cluster Map - System Overview`) provides:
+The main dashboard (`Clustr - System Overview`) provides:
 
 1. **Key Performance Indicators (KPIs)**
    - Total graph nodes
@@ -165,7 +165,7 @@ The main dashboard (`Reddit Cluster Map - System Overview`) provides:
 
 ### Alert Rules
 
-Alerts are defined in `monitoring/prometheus/alerts/reddit-cluster-map.yml`:
+Alerts are defined in `monitoring/prometheus/alerts/clustr.yml`:
 
 | Alert | Condition | Severity | Description |
 |-------|-----------|----------|-------------|

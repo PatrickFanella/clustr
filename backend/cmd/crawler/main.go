@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// Initialize tracing
-	shutdownTracing, err := tracing.Init("reddit-cluster-map-crawler")
+	shutdownTracing, err := tracing.Init("clustr-crawler")
 	if err != nil {
 		logger.Warn("Failed to initialize tracing", "error", err)
 	} else if cfg.OTELEnabled {

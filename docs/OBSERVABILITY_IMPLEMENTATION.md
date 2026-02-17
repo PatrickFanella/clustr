@@ -1,7 +1,7 @@
 # Observability Implementation Summary
 
 ## Overview
-This implementation adds comprehensive observability features to the reddit-cluster-map project, addressing issue #XX for structured logging, distributed tracing, and error reporting.
+This implementation adds comprehensive observability features to the Clustr project, addressing issue #XX for structured logging, distributed tracing, and error reporting.
 
 ## What Was Implemented
 

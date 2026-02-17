@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Security Testing Script
-# Automated security testing for Reddit Cluster Map
+# Automated security testing for Clustr
 
 set -e
 
@@ -395,7 +395,7 @@ test_api_endpoints() {
 
 main() {
     echo -e "${BLUE}========================================${NC}"
-    echo -e "${BLUE}Reddit Cluster Map - Security Testing${NC}"
+    echo -e "${BLUE}Clustr - Security Testing${NC}"
     echo -e "${BLUE}========================================${NC}"
     echo ""
     log_info "Starting security tests at $(date)"

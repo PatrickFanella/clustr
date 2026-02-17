@@ -1,6 +1,6 @@
 # Community Aggregation API
 
-This document describes the community aggregation endpoints that provide server-side community detection and aggregation for the Reddit Cluster Map.
+This document describes the community aggregation endpoints that provide server-side community detection and aggregation for the Clustr.
 
 ## Overview
 

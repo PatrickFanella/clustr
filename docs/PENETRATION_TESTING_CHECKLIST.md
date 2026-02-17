@@ -1,6 +1,6 @@
 # Penetration Testing Checklist
 
-This comprehensive checklist provides a structured approach to conducting penetration testing on the Reddit Cluster Map application. Use this checklist to ensure thorough coverage of security testing activities.
+This comprehensive checklist provides a structured approach to conducting penetration testing on the Clustr application. Use this checklist to ensure thorough coverage of security testing activities.
 
 ## Pre-Testing
 

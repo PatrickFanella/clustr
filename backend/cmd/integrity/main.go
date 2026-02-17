@@ -77,7 +77,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println("Reddit Cluster Map - Data Integrity Tool")
+	fmt.Println("Clustr - Data Integrity Tool")
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  integrity check                    - Run all integrity checks")

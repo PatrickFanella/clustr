@@ -1,6 +1,6 @@
 # Observability Guide
 
-This guide covers the observability features available in the Reddit Cluster Map project, including structured logging, distributed tracing, and error reporting.
+This guide covers the observability features available in the Clustr project, including structured logging, distributed tracing, and error reporting.
 
 ## Overview
 

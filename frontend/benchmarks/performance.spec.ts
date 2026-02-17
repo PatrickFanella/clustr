@@ -1,5 +1,5 @@
 /**
- * Performance benchmarks for Reddit Cluster Map
+ * Performance benchmarks for Clustr
  * 
  * Measures rendering performance, FPS, memory usage, and physics simulation
  * across different dataset sizes (1k, 10k, 50k, 100k nodes).

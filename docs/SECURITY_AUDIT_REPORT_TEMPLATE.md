@@ -1,6 +1,6 @@
 # Security Audit Report
 
-**Project:** Reddit Cluster Map  
+**Project:** Clustr  
 **Audit Date:** [YYYY-MM-DD]  
 **Auditor:** [Name/Organization]  
 **Report Version:** 1.0  

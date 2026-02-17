@@ -191,6 +191,9 @@ export function calculateTransitionProgress(
 export class AdaptiveLODManager {
   private config: LODConfig;
   private fpsHistory: number[] = [];
+  private fpsHistoryIndex = 0;
+  private fpsHistoryFull = false;
+  private static readonly FPS_HISTORY_SIZE = 60;
   private currentTier: LODTier = LODTier.HIGH;
   private targetTier: LODTier = LODTier.HIGH;
   private transitionStartTime: number = 0;
@@ -235,22 +238,30 @@ export class AdaptiveLODManager {
    */
   public recordFrame(fps: number): void {
     if (!this.config.enableAdaptiveLOD) return;
-    
-    this.fpsHistory.push(fps);
-    
-    // Keep only last 60 frames (1 second at 60fps)
-    if (this.fpsHistory.length > 60) {
-      this.fpsHistory.shift();
+
+    // Circular buffer: O(1) insert, no shift overhead
+    this.fpsHistory[this.fpsHistoryIndex] = fps;
+    this.fpsHistoryIndex++;
+    if (this.fpsHistoryIndex >= AdaptiveLODManager.FPS_HISTORY_SIZE) {
+      this.fpsHistoryIndex = 0;
+      this.fpsHistoryFull = true;
     }
   }
-  
+
   /**
    * Get current average FPS
    */
   public getAverageFPS(): number {
-    if (this.fpsHistory.length === 0) return 60;
-    
-    return this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length;
+    const count = this.fpsHistoryFull
+      ? AdaptiveLODManager.FPS_HISTORY_SIZE
+      : this.fpsHistoryIndex;
+    if (count === 0) return 60;
+
+    let sum = 0;
+    for (let i = 0; i < count; i++) {
+      sum += this.fpsHistory[i];
+    }
+    return sum / count;
   }
   
   /**
@@ -373,6 +384,8 @@ export class AdaptiveLODManager {
    */
   public reset(): void {
     this.fpsHistory = [];
+    this.fpsHistoryIndex = 0;
+    this.fpsHistoryFull = false;
     this.currentTier = LODTier.HIGH;
     this.targetTier = LODTier.HIGH;
     this.transitionStartTime = 0;

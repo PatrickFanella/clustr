@@ -5,7 +5,7 @@
 
 ## Executive Summary
 
-This document provides performance analysis and optimization recommendations for the Reddit Cluster Map application based on code review and established profiling infrastructure.
+This document provides performance analysis and optimization recommendations for the Clustr application based on code review and established profiling infrastructure.
 
 ## Current Performance Profile
 
@@ -440,7 +440,7 @@ Document results for:
 
 ## Conclusion
 
-The Reddit Cluster Map application has a solid foundation for performance monitoring and optimization. Key strengths include comprehensive database indexing, request capping, and monitoring infrastructure.
+The Clustr application has a solid foundation for performance monitoring and optimization. Key strengths include comprehensive database indexing, request capping, and monitoring infrastructure.
 
 Primary optimization opportunities lie in:
 1. Memory allocation optimization in hot paths

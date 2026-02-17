@@ -550,7 +550,7 @@ This script (in `backend/scripts/maintenance.sql`) runs:
 **Schedule via cron:**
 ```bash
 # Add to crontab
-0 2 * * 0 cd /path/to/backend && make maintenance >> /var/log/reddit-cluster-maintenance.log 2>&1
+0 2 * * 0 cd /path/to/backend && make maintenance >> /var/log/clustr-maintenance.log 2>&1
 ```
 
 ---

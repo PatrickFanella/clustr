@@ -1,6 +1,6 @@
 # Developer Guide
 
-This guide covers development workflows, tooling, and best practices for contributing to reddit-cluster-map.
+This guide covers development workflows, tooling, and best practices for contributing to Clustr.
 
 ## Quick Start for New Developers
 

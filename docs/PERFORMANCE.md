@@ -1,6 +1,6 @@
 # Performance Optimizations
 
-This document describes the performance optimizations implemented for the Reddit Cluster Map frontend.
+This document describes the performance optimizations implemented for the Clustr frontend.
 
 ## Overview
 

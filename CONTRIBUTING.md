@@ -1,6 +1,6 @@
-# Contributing to Reddit Cluster Map
+# Contributing to Clustr
 
-Thank you for your interest in contributing to Reddit Cluster Map! This document provides guidelines and best practices for contributing to the project.
+Thank you for your interest in contributing to Clustr! This document provides guidelines and best practices for contributing to the project.
 
 ## Table of Contents
 
@@ -962,4 +962,4 @@ If you have questions about contributing:
 2. Search [existing issues](https://github.com/subculture-collective/reddit-cluster-map/issues)
 3. Open a new issue with the "question" label
 
-Thank you for contributing to Reddit Cluster Map! 🚀
+Thank you for contributing to Clustr!

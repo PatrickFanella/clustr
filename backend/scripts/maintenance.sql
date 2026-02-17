@@ -1,4 +1,4 @@
--- Database Maintenance Script for Reddit Cluster Map
+-- Database Maintenance Script for Clustr
 -- This script contains common maintenance operations for PostgreSQL
 
 -- ============================================

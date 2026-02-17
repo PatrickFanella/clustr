@@ -1,7 +1,7 @@
 # Dark/Light Theme Implementation - Summary
 
 ## Overview
-Successfully implemented a comprehensive dark/light theme system with system preference detection for the Reddit Cluster Map application. This feature allows users to view the application in their preferred color scheme while maintaining visual consistency and usability.
+Successfully implemented a comprehensive dark/light theme system with system preference detection for the Clustr application. This feature allows users to view the application in their preferred color scheme while maintaining visual consistency and usability.
 
 ## Changes Summary
 

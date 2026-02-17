@@ -1,6 +1,6 @@
 # API Error Codes Documentation
 
-This document describes the structured error codes used by the reddit-cluster-map API.
+This document describes the structured error codes used by the Clustr API.
 
 ## Error Response Format
 

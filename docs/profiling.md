@@ -1,6 +1,6 @@
 # Performance Profiling Guide
 
-This guide covers performance profiling and optimization techniques for the Reddit Cluster Map application.
+This guide covers performance profiling and optimization techniques for the Clustr application.
 
 ## Table of Contents
 

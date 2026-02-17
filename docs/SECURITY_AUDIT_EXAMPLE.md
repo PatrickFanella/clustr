@@ -1,6 +1,6 @@
 # Security Audit Report - Example
 
-**Project:** Reddit Cluster Map  
+**Project:** Clustr  
 **Audit Date:** 2025-11-01  
 **Auditor:** Security Team  
 **Report Version:** 1.0  
@@ -11,7 +11,7 @@
 ## Executive Summary
 
 ### Overview
-This security audit was conducted on the Reddit Cluster Map application to assess its security posture and identify potential vulnerabilities. The audit included automated scanning with CodeQL, dependency vulnerability assessment, manual code review, and penetration testing of key endpoints.
+This security audit was conducted on the Clustr application to assess its security posture and identify potential vulnerabilities. The audit included automated scanning with CodeQL, dependency vulnerability assessment, manual code review, and penetration testing of key endpoints.
 
 ### Key Findings
 - **Critical:** 0 findings
@@ -529,7 +529,7 @@ None required - no medium-priority issues found.
 ## Conclusion
 
 ### Summary
-The Reddit Cluster Map application demonstrates excellent security practices with a comprehensive security implementation. The security audit found no critical, high, or medium-severity vulnerabilities. All automated security scans passed successfully, and manual penetration testing confirmed the effectiveness of security controls.
+The Clustr application demonstrates excellent security practices with a comprehensive security implementation. The security audit found no critical, high, or medium-severity vulnerabilities. All automated security scans passed successfully, and manual penetration testing confirmed the effectiveness of security controls.
 
 ### Positive Findings
 - **Zero critical/high vulnerabilities** in codebase and dependencies
@@ -582,5 +582,5 @@ This report contains confidential security information and is intended only for 
 
 **Report Prepared By:**  
 Security Team  
-Reddit Cluster Map Project  
+Clustr Project  
 2025-11-01

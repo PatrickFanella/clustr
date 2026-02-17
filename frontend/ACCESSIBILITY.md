@@ -1,10 +1,10 @@
 # Accessibility Features
 
-This document describes the WCAG 2.1 AA accessibility features implemented in the Reddit Cluster Map application.
+This document describes the WCAG 2.1 AA accessibility features implemented in the Clustr application.
 
 ## Overview
 
-The Reddit Cluster Map application is designed to be accessible to users with disabilities, meeting WCAG 2.1 Level AA standards. While the 3D/2D graph visualization itself is inherently visual and relies on WebGL, all UI controls and navigation elements are fully accessible.
+The Clustr application is designed to be accessible to users with disabilities, meeting WCAG 2.1 Level AA standards. While the 3D/2D graph visualization itself is inherently visual and relies on WebGL, all UI controls and navigation elements are fully accessible.
 
 ## Key Features
 

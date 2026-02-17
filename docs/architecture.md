@@ -1,6 +1,6 @@
 # System Architecture
 
-This document provides a comprehensive overview of the Reddit Cluster Map architecture, including component interactions, data flow, and design decisions.
+This document provides a comprehensive overview of the Clustr architecture, including component interactions, data flow, and design decisions.
 
 ## Table of Contents
 

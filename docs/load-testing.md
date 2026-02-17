@@ -1,6 +1,6 @@
 # Load Testing with k6
 
-This guide covers the k6-based load testing infrastructure for the Reddit Cluster Map backend API.
+This guide covers the k6-based load testing infrastructure for the Clustr backend API.
 
 ## Overview
 
@@ -213,7 +213,7 @@ During load tests, monitor:
 
 ```bash
 # Monitor API container resources
-docker stats reddit-cluster-api
+docker stats clustr-api
 
 # Watch API logs
 make logs-api

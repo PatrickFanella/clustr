@@ -855,7 +855,7 @@
   "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
-  "tags": ["reddit-cluster-map"],
+  "tags": ["clustr"],
   "templating": {
     "list": []
   },
@@ -865,7 +865,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Reddit Cluster Map - System Overview",
-  "uid": "reddit-cluster-map-overview",
+  "title": "Clustr - System Overview",
+  "uid": "clustr-overview",
   "version": 1
 }

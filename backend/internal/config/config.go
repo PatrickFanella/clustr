@@ -78,7 +78,7 @@ func Load() *Config {
 	}
 	ua := os.Getenv("REDDIT_USER_AGENT")
 	if strings.TrimSpace(ua) == "" {
-		ua = "reddit-cluster-map/0.1"
+		ua = "clustr/0.1"
 	}
 	cached = &Config{
 		UserAgent:             ua,

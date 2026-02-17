@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation adds comprehensive analytics and monitoring capabilities to the Reddit Cluster Map project using Prometheus and Grafana.
+This implementation adds comprehensive analytics and monitoring capabilities to the Clustr project using Prometheus and Grafana.
 
 ## What Was Added
 
@@ -40,7 +40,7 @@ Added SQL queries for:
 - Self-monitoring configuration
 - Alert rule loading
 
-**Alert Rules (`alerts/reddit-cluster-map.yml`):**
+**Alert Rules (`alerts/clustr.yml`):**
 - HighAPIErrorRate: API errors > 5% for 5 minutes
 - HighCrawlerErrorRate: Crawler failures > 10% for 10 minutes
 - SlowAPIQueries: p95 response time > 2 seconds
@@ -55,7 +55,7 @@ Added SQL queries for:
 **Datasource:**
 - Auto-provisioned Prometheus datasource
 
-**Dashboard (`reddit-cluster-map-overview.json`):**
+**Dashboard (`clustr-overview.json`):**
 12 panels covering:
 1. Total Graph Nodes (stat)
 2. Total Graph Links (stat)
@@ -226,10 +226,10 @@ Potential improvements for future iterations:
 - `backend/internal/queries/metrics.sql` - SQL queries
 - `backend/internal/db/metrics.sql.go` - Generated sqlc code
 - `monitoring/prometheus/prometheus.yml` - Prometheus config
-- `monitoring/prometheus/alerts/reddit-cluster-map.yml` - Alert rules
+- `monitoring/prometheus/alerts/clustr.yml` - Alert rules
 - `monitoring/grafana/provisioning/datasources/prometheus.yml` - Datasource config
 - `monitoring/grafana/provisioning/dashboards/default.yml` - Dashboard provider
-- `monitoring/grafana/provisioning/dashboards/reddit-cluster-map-overview.json` - Dashboard
+- `monitoring/grafana/provisioning/dashboards/clustr-overview.json` - Dashboard
 - `monitoring/README.md` - Monitoring directory README
 - `docs/monitoring.md` - Complete monitoring guide
 - `scripts/verify-monitoring.sh` - Configuration verification script

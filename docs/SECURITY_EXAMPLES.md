@@ -38,7 +38,7 @@ RATE_LIMIT_PER_IP=10
 RATE_LIMIT_PER_IP_BURST=20
 
 # Restrict to your production domains
-CORS_ALLOWED_ORIGINS="https://reddit-cluster-map.example.com,https://app.example.com"
+CORS_ALLOWED_ORIGINS="https://clustr.example.com,https://app.example.com"
 
 # Strong admin token (use a secure random value)
 ADMIN_API_TOKEN=your-very-secure-random-token-here
@@ -46,7 +46,7 @@ ADMIN_API_TOKEN=your-very-secure-random-token-here
 # Reddit OAuth (production credentials)
 REDDIT_CLIENT_ID=prod_client_id
 REDDIT_CLIENT_SECRET=prod_client_secret
-REDDIT_REDIRECT_URI=https://reddit-cluster-map.example.com/auth/callback
+REDDIT_REDIRECT_URI=https://clustr.example.com/auth/callback
 ```
 
 ## Example 3: Staging with Wildcard Subdomain
@@ -259,7 +259,7 @@ curl -I http://localhost:8000/api/graph
 ## Example 10: Nginx Reverse Proxy Setup
 
 ```nginx
-# /etc/nginx/sites-available/reddit-cluster-map
+# /etc/nginx/sites-available/clustr
 
 upstream api_backend {
     server localhost:8000;
@@ -304,20 +304,20 @@ server {
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: reddit-cluster-api
+  name: clustr-api
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: reddit-cluster-api
+      app: clustr-api
   template:
     metadata:
       labels:
-        app: reddit-cluster-api
+        app: clustr-api
     spec:
       containers:
       - name: api
-        image: your-registry/reddit-cluster-api:latest
+        image: your-registry/clustr-api:latest
         ports:
         - containerPort: 8000
         env:

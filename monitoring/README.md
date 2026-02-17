@@ -1,6 +1,6 @@
 # Monitoring Configuration
 
-This directory contains the monitoring configuration for the Reddit Cluster Map project.
+This directory contains the monitoring configuration for the Clustr project.
 
 ## Structure
 
@@ -9,14 +9,14 @@ monitoring/
 ├── prometheus/
 │   ├── prometheus.yml          # Main Prometheus configuration
 │   └── alerts/
-│       └── reddit-cluster-map.yml  # Alert rules
+│       └── clustr.yml  # Alert rules
 └── grafana/
     └── provisioning/
         ├── datasources/
         │   └── prometheus.yml      # Prometheus datasource config
         └── dashboards/
             ├── default.yml         # Dashboard provider config
-            └── reddit-cluster-map-overview.json  # Main dashboard
+            └── clustr-overview.json  # Main dashboard
 ```
 
 ## Quick Start
@@ -38,7 +38,7 @@ Access the services:
 ### Prometheus
 
 - **prometheus.yml**: Scrape configuration for API server metrics
-- **alerts/reddit-cluster-map.yml**: Alert rules for:
+- **alerts/clustr.yml**: Alert rules for:
   - High error rates (API and crawler)
   - Slow queries
   - Database errors
@@ -49,7 +49,7 @@ Access the services:
 
 - **datasources/prometheus.yml**: Auto-configures Prometheus as datasource
 - **dashboards/default.yml**: Dashboard provider configuration
-- **dashboards/reddit-cluster-map-overview.json**: Main system dashboard with:
+- **dashboards/clustr-overview.json**: Main system dashboard with:
   - KPI metrics (nodes, links, communities, jobs)
   - Graph growth charts
   - Crawl job status and throughput
@@ -66,7 +66,7 @@ Access the services:
 
 ### Adding New Alerts
 
-Edit `prometheus/alerts/reddit-cluster-map.yml`:
+Edit `prometheus/alerts/clustr.yml`:
 
 ```yaml
 - alert: MyNewAlert

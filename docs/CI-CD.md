@@ -1,6 +1,6 @@
 # CI/CD Pipeline Documentation
 
-This document describes the CI/CD pipeline for the Reddit Cluster Map project.
+This document describes the CI/CD pipeline for the Clustr project.
 
 ## Overview
 
@@ -109,28 +109,28 @@ npm run build
 
 ```bash
 # Server
-docker build -t reddit-cluster-server:local \
+docker build -t clustr-server:local \
   --build-arg VERSION=local \
   --build-arg COMMIT=$(git rev-parse HEAD) \
   --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   -f backend/Dockerfile backend/
 
 # Crawler
-docker build -t reddit-cluster-crawler:local \
+docker build -t clustr-crawler:local \
   --build-arg VERSION=local \
   --build-arg COMMIT=$(git rev-parse HEAD) \
   --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   -f backend/Dockerfile.crawler backend/
 
 # Precalculate
-docker build -t reddit-cluster-precalculate:local \
+docker build -t clustr-precalculate:local \
   --build-arg VERSION=local \
   --build-arg COMMIT=$(git rev-parse HEAD) \
   --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   -f backend/Dockerfile.precalculate backend/
 
 # Frontend
-docker build -t reddit-cluster-frontend:local frontend/
+docker build -t clustr-frontend:local frontend/
 ```
 
 ### Creating a Release

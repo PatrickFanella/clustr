@@ -1,7 +1,7 @@
 # Inspector Panel Implementation Summary
 
 ## Overview
-Successfully implemented a rich, slide-in Node Inspector panel that displays comprehensive information about selected nodes in the Reddit Cluster Map graph visualization.
+Successfully implemented a rich, slide-in Node Inspector panel that displays comprehensive information about selected nodes in the Clustr graph visualization.
 
 ## Key Features Implemented
 

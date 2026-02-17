@@ -62,17 +62,20 @@ export class LinkRenderer {
     private positionsBuffer: Float32Array;
     private maxLinks: number;
     private needsUpdate = false;
-    private lastCameraUpdate: {
-        position: THREE.Vector3;
-        target: THREE.Vector3;
-    } | null = null;
-    private positionsDirty = false; // Track if positions changed since last visibility update
-    private lastPerformanceWarning = 0; // Timestamp of last performance warning
+    private hasLastCameraUpdate = false;
+    private readonly _lastCamPos = new THREE.Vector3();
+    private readonly _lastCamTarget = new THREE.Vector3();
+    private positionsDirty = false;
+    private lastPerformanceWarning = 0;
+    private hasCullingData = false;
     private readonly frustum = new THREE.Frustum();
     private readonly cameraMatrix = new THREE.Matrix4();
+    private readonly _tempCameraPos = new THREE.Vector3();
+    private readonly _tempCameraTarget = new THREE.Vector3();
+    private readonly _tempVector = new THREE.Vector3();
     private static readonly MIN_CAMERA_POSITION_DELTA = 10;
     private static readonly MIN_CAMERA_TARGET_DELTA = 10;
-    private static readonly PERFORMANCE_WARNING_THROTTLE = 5000; // Warn at most once per 5 seconds
+    private static readonly PERFORMANCE_WARNING_THROTTLE = 5000;
 
     constructor(scene: THREE.Scene, config: LinkRendererConfig = {}) {
         this.scene = scene;
@@ -171,39 +174,32 @@ export class LinkRenderer {
      * Call this when the camera moves significantly
      */
     public updateVisibility(camera: THREE.Camera): void {
-        // Check if camera moved significantly
-        const cameraPos = camera.position.clone();
-        const cameraTarget = new THREE.Vector3();
+        const cameraPos = this._tempCameraPos.copy(camera.position);
+        const cameraTarget = this._tempCameraTarget.set(0, 0, 0);
 
         if (camera instanceof THREE.PerspectiveCamera) {
             camera.getWorldDirection(cameraTarget);
             cameraTarget.multiplyScalar(100).add(cameraPos);
         }
 
-        // Force update if positions changed since last visibility update,
-        // even if camera hasn't moved (nodes may have moved in/out of frustum)
         const forceUpdate = this.positionsDirty;
 
-        // Only update if camera moved significantly (optimization)
-        if (!forceUpdate && this.lastCameraUpdate) {
-            const posDiff = cameraPos.distanceTo(
-                this.lastCameraUpdate.position,
-            );
-            const targetDiff = cameraTarget.distanceTo(
-                this.lastCameraUpdate.target,
-            );
+        if (!forceUpdate && this.hasLastCameraUpdate) {
+            const posDiff = cameraPos.distanceTo(this._lastCamPos);
+            const targetDiff = cameraTarget.distanceTo(this._lastCamTarget);
             if (
                 posDiff < LinkRenderer.MIN_CAMERA_POSITION_DELTA &&
                 targetDiff < LinkRenderer.MIN_CAMERA_TARGET_DELTA
             ) {
-                return; // Camera hasn't moved significantly and positions haven't changed
+                return;
             }
         }
 
-        this.lastCameraUpdate = { position: cameraPos, target: cameraTarget };
-        this.positionsDirty = false; // Clear the flag after updating visibility
+        this._lastCamPos.copy(cameraPos);
+        this._lastCamTarget.copy(cameraTarget);
+        this.hasLastCameraUpdate = true;
+        this.positionsDirty = false;
 
-        // Update frustum
         camera.updateMatrixWorld();
         this.cameraMatrix.multiplyMatrices(
             camera.projectionMatrix,
@@ -211,16 +207,15 @@ export class LinkRenderer {
         );
         this.frustum.setFromProjectionMatrix(this.cameraMatrix);
 
-        // Update visible nodes
         this.visibleNodeIds.clear();
-        const tempVector = new THREE.Vector3();
         for (const [nodeId, pos] of this.nodePositions.entries()) {
-            tempVector.set(pos.x, pos.y, pos.z);
-            if (this.frustum.containsPoint(tempVector)) {
+            this._tempVector.set(pos.x, pos.y, pos.z);
+            if (this.frustum.containsPoint(this._tempVector)) {
                 this.visibleNodeIds.add(nodeId);
             }
         }
 
+        this.hasCullingData = true;
         this.needsUpdate = true;
     }
 
@@ -248,17 +243,17 @@ export class LinkRenderer {
             }
 
             // Skip if either endpoint is not visible (frustum culling)
-            // If visibleNodeIds is empty, render all links (no culling active)
+            // Only cull if updateVisibility has been called at least once
             if (
-                this.visibleNodeIds.size > 0 &&
+                this.hasCullingData &&
                 (!this.visibleNodeIds.has(link.source) ||
                     !this.visibleNodeIds.has(link.target))
             ) {
                 continue;
             }
 
-            // Check if we've exceeded buffer capacity
-            if (vertexCount * 3 >= this.positionsBuffer.length) {
+            // Check if we have room for 2 more vertices (6 floats)
+            if ((vertexCount + 2) * 3 > this.positionsBuffer.length) {
                 // Buffer capacity exceeded - this should not happen since setLinks() clamps to maxLinks
                 break;
             }
@@ -316,9 +311,6 @@ export class LinkRenderer {
 
     /**
      * Get rendering statistics
-     * Note: visibleLinks calculation may be expensive for very large graphs (200k+ links)
-     * as it filters the entire links array. This is acceptable for debugging/monitoring
-     * but should not be called in performance-critical paths.
      */
     public getStats(): {
         totalLinks: number;
@@ -327,19 +319,11 @@ export class LinkRenderer {
         drawCalls: number;
     } {
         const drawRange = this.geometry.drawRange;
+        const bufferedLinks = drawRange.count / 2;
         return {
             totalLinks: this.links.length,
-            // visibleLinks is calculated on-demand for accuracy
-            // For performance-critical usage, use bufferedLinks instead
-            visibleLinks:
-                this.visibleNodeIds.size > 0 ?
-                    this.links.filter(
-                        l =>
-                            this.visibleNodeIds.has(l.source) &&
-                            this.visibleNodeIds.has(l.target),
-                    ).length
-                :   this.links.length,
-            bufferedLinks: drawRange.count / 2,
+            visibleLinks: bufferedLinks,
+            bufferedLinks,
             drawCalls: drawRange.count > 0 ? 1 : 0,
         };
     }
@@ -350,11 +334,14 @@ export class LinkRenderer {
     public dispose(): void {
         if (this.lineSegments) {
             this.scene.remove(this.lineSegments);
+            this.lineSegments = null;
         }
         this.geometry.dispose();
         this.material.dispose();
         this.links = [];
         this.nodePositions.clear();
         this.visibleNodeIds.clear();
+        this.hasCullingData = false;
+        this.hasLastCameraUpdate = false;
     }
 }

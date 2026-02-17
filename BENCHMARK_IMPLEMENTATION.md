@@ -2,7 +2,7 @@
 
 ## Overview
 
-A complete automated performance benchmark suite has been implemented for the Reddit Cluster Map frontend, measuring rendering FPS, data load times, physics simulation performance, and memory usage with automated regression detection in CI.
+A complete automated performance benchmark suite has been implemented for the Clustr frontend, measuring rendering FPS, data load times, physics simulation performance, and memory usage with automated regression detection in CI.
 
 ## What Was Implemented
 

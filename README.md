@@ -1,4 +1,4 @@
-# Reddit Cluster Map
+# Clustr
 
 [![CI](https://github.com/onnwee/reddit-cluster-map/actions/workflows/ci.yml/badge.svg)](https://github.com/onnwee/reddit-cluster-map/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](VERSION)

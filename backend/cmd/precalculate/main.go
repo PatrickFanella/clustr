@@ -44,7 +44,7 @@ func main() {
 	}
 
 	// Initialize tracing
-	shutdownTracing, err := tracing.Init("reddit-cluster-map-precalculate")
+	shutdownTracing, err := tracing.Init("clustr-precalculate")
 	if err != nil {
 		logger.Warn("Failed to initialize tracing", "error", err)
 	} else if cfg.OTELEnabled {

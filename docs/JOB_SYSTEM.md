@@ -2,7 +2,7 @@
 
 ## Overview
 
-The reddit-cluster-map crawler uses an advanced job queue system with prioritization, automatic retries, and scheduled jobs to efficiently manage crawl operations.
+The Clustr crawler uses an advanced job queue system with prioritization, automatic retries, and scheduled jobs to efficiently manage crawl operations.
 
 ## Features
 

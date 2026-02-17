@@ -1,6 +1,6 @@
 # Release Process Example
 
-This document provides a step-by-step example of creating a release for the Reddit Cluster Map project.
+This document provides a step-by-step example of creating a release for the Clustr project.
 
 ## Prerequisites
 
@@ -144,7 +144,7 @@ docker pull ghcr.io/subculture-collective/reddit-cluster-map-precalculate:v1.0.0
 docker pull ghcr.io/subculture-collective/reddit-cluster-map-frontend:v1.0.0
 
 # Verify image tags
-docker images | grep reddit-cluster-map
+docker images | grep clustr
 ```
 
 ### Step 9: Test the Release

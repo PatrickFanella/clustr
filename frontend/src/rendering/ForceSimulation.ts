@@ -35,6 +35,7 @@ export interface PhysicsConfig {
     linkDistance: number;
     velocityDecay: number;
     collisionRadius?: number;
+    cooldownTicks?: number;
     autoTune?: boolean; // Auto-scale physics parameters based on node count
 }
 
@@ -81,8 +82,12 @@ export class ForceSimulation {
     // Web Worker support
     private worker: Worker | null = null;
     private useWorker = false;
-    private nodeIds: string[] = []; // Track node order for position buffer decoding
-    private currentAlpha = 0; // Track alpha from worker messages
+    private nodeIds: string[] = [];
+    private currentAlpha = 0;
+
+    // Reusable position Map to avoid allocating new Map + N objects per tick
+    private _tickPositions: Map<string, { x: number; y: number; z: number }> =
+        new Map();
 
     constructor(config: ForceSimulationConfig = {}) {
         this.config = config;
@@ -144,49 +149,43 @@ export class ForceSimulation {
      */
     private handleWorkerMessage(message: {
         type: string;
-        positions: Float32Array;
-        alpha: number;
-        nodeCount: number;
+        positions?: Float32Array;
+        alpha?: number;
+        nodeCount?: number;
     }): void {
-        if (message.type === 'positions') {
-            // Update local alpha for getStats()
-            this.currentAlpha = message.alpha;
+        if (message.type === 'positions' && message.positions) {
+            this.currentAlpha = message.alpha ?? 0;
 
-            // Update local node positions
-            for (
-                let i = 0;
-                i < message.nodeCount && i < this.nodeIds.length;
-                i++
-            ) {
+            const count = Math.min(
+                message.nodeCount ?? 0,
+                this.nodeIds.length,
+            );
+
+            // Update local node positions and reusable tick Map in a single pass
+            for (let i = 0; i < count; i++) {
                 const nodeId = this.nodeIds[i];
+                const x = message.positions[i * 3];
+                const y = message.positions[i * 3 + 1];
+                const z = message.positions[i * 3 + 2];
+
                 const node = this.nodeMap.get(nodeId);
                 if (node) {
-                    node.x = message.positions[i * 3];
-                    node.y = message.positions[i * 3 + 1];
-                    node.z = message.positions[i * 3 + 2];
+                    node.x = x;
+                    node.y = y;
+                    node.z = z;
+                }
+
+                const pos = this._tickPositions.get(nodeId);
+                if (pos) {
+                    pos.x = x;
+                    pos.y = y;
+                    pos.z = z;
                 }
             }
 
-            // Emit to callback - reuse a single Map to reduce GC pressure
-            if (this.config.onTick) {
-                const positions = new Map<
-                    string,
-                    { x: number; y: number; z: number }
-                >();
-                for (
-                    let i = 0;
-                    i < message.nodeCount && i < this.nodeIds.length;
-                    i++
-                ) {
-                    const nodeId = this.nodeIds[i];
-                    positions.set(nodeId, {
-                        x: message.positions[i * 3],
-                        y: message.positions[i * 3 + 1],
-                        z: message.positions[i * 3 + 2],
-                    });
-                }
-                this.config.onTick(positions);
-            }
+            this.config.onTick?.(this._tickPositions);
+        } else if (message.type === 'end') {
+            this.currentAlpha = 0;
         }
     }
 
@@ -220,24 +219,6 @@ export class ForceSimulation {
      */
     private getAutoTunedCooldownTicks(nodeCount: number): number {
         return Math.max(200, Math.floor(nodeCount / 100));
-    }
-
-    /**
-     * Clamp velocity to prevent runaway nodes
-     */
-    private clampVelocity(node: SimNode): void {
-        if (node.vx !== undefined && node.vy !== undefined) {
-            const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
-            if (speed > ForceSimulation.MAX_VELOCITY) {
-                const scale = ForceSimulation.MAX_VELOCITY / speed;
-                node.vx *= scale;
-                node.vy *= scale;
-                // Also clamp z velocity if present
-                if (node.vz !== undefined) {
-                    node.vz *= scale;
-                }
-            }
-        }
     }
 
     /**
@@ -324,10 +305,16 @@ export class ForceSimulation {
         // Track node IDs in order for worker communication
         this.nodeIds = this.nodes.map(n => n.id);
 
-        // Build node map for quick lookup
+        // Build node map and reusable tick positions for quick lookup
         this.nodeMap.clear();
+        this._tickPositions.clear();
         for (const node of this.nodes) {
             this.nodeMap.set(node.id, node);
+            this._tickPositions.set(node.id, {
+                x: node.x ?? 0,
+                y: node.y ?? 0,
+                z: node.z ?? 0,
+            });
         }
 
         // Convert links
@@ -510,55 +497,55 @@ export class ForceSimulation {
             this.emitTick();
         });
 
-        // Configure alpha decay / cooldown behavior
+        this.applyAlphaDecay(physics, nodeCount);
+    }
+
+    /**
+     * Apply alpha decay / cooldown configuration to the simulation
+     */
+    private applyAlphaDecay(
+        physics: PhysicsConfig | undefined,
+        nodeCount: number,
+    ): void {
+        if (!this.simulation) return;
+
+        const autoTune = physics?.autoTune ?? false;
         const manualCooldownTicks = physics?.cooldownTicks;
         let cooldownTicks: number | undefined;
 
         if (autoTune && nodeCount > 0) {
-            // Auto-tune mode: derive cooldown from node count
             cooldownTicks = this.getAutoTunedCooldownTicks(nodeCount);
         } else if (typeof manualCooldownTicks === 'number') {
             if (manualCooldownTicks > 0) {
-                // Manual mode: use configured cooldownTicks directly
                 cooldownTicks = manualCooldownTicks;
             } else {
-                // Edge case: cooldownTicks <= 0 disables automatic cooling
-                // alphaDecay(0) means no decay; convergence detection will still stop the sim
                 this.simulation.alphaDecay(0);
             }
         }
 
         if (cooldownTicks && cooldownTicks > 0) {
-            // Alpha decay formula: 1 - Math.pow(0.001, 1 / cooldownTicks)
-            // This makes alpha reach ~0.001 after 'cooldownTicks' iterations
             const alphaDecay = 1 - Math.pow(0.001, 1 / cooldownTicks);
             this.simulation.alphaDecay(alphaDecay);
         }
-
-        // Note: Removed synchronous tick() to avoid blocking the main thread.
-        // The simulation will run incrementally via the animation loop.
     }
 
     /**
-     * Emit current positions to callback
+     * Emit current positions to callback using reusable Map
      */
     private emitTick(): void {
         if (!this.config.onTick) return;
 
-        const positions = new Map<
-            string,
-            { x: number; y: number; z: number }
-        >();
-
+        // Update reusable position objects in-place
         for (const node of this.nodes) {
-            positions.set(node.id, {
-                x: node.x ?? 0,
-                y: node.y ?? 0,
-                z: node.z ?? 0,
-            });
+            const pos = this._tickPositions.get(node.id);
+            if (pos) {
+                pos.x = node.x ?? 0;
+                pos.y = node.y ?? 0;
+                pos.z = node.z ?? 0;
+            }
         }
 
-        this.config.onTick(positions);
+        this.config.onTick(this._tickPositions);
     }
 
     /**
@@ -647,27 +634,7 @@ export class ForceSimulation {
             this.simulation.force('collide', null);
         }
 
-        // Update alpha decay / cooldown behavior
-        const manualCooldownTicks = physics.cooldownTicks;
-        let cooldownTicks: number | undefined;
-
-        if (autoTune && nodeCount > 0) {
-            // Auto-tune mode: derive cooldown from node count
-            cooldownTicks = this.getAutoTunedCooldownTicks(nodeCount);
-        } else if (typeof manualCooldownTicks === 'number') {
-            if (manualCooldownTicks > 0) {
-                // Manual mode: use configured cooldownTicks directly
-                cooldownTicks = manualCooldownTicks;
-            } else {
-                // Edge case: cooldownTicks <= 0 disables automatic cooling
-                this.simulation.alphaDecay(0);
-            }
-        }
-
-        if (cooldownTicks && cooldownTicks > 0) {
-            const alphaDecay = 1 - Math.pow(0.001, 1 / cooldownTicks);
-            this.simulation.alphaDecay(alphaDecay);
-        }
+        this.applyAlphaDecay(physics, nodeCount);
 
         // Restart simulation to apply changes
         this.simulation.alpha(0.3).restart();
@@ -756,5 +723,6 @@ export class ForceSimulation {
         this.links = [];
         this.nodeMap.clear();
         this.nodeIds = [];
+        this._tickPositions.clear();
     }
 }

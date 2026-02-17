@@ -69,7 +69,7 @@ make precalculate
 **Force full rebuild:**
 ```bash
 # Using Docker
-docker exec reddit-cluster-precalculate ./precalculate --full
+docker exec clustr-precalculate ./precalculate --full
 
 # Or directly if binary is available
 ./precalculate --full
@@ -96,7 +96,7 @@ SELECT * FROM precalc_state;
 The precalculation service runs continuously in Docker:
 
 ```yaml
-reddit-cluster-precalculate:
+clustr-precalculate:
   environment:
     - PRECALC_INTERVAL=1h  # Run every hour
     - PRECALC_CLEAR_ON_START=false  # Use incremental mode
@@ -104,8 +104,8 @@ reddit-cluster-precalculate:
 
 To trigger a full rebuild without restarting:
 ```bash
-docker exec reddit-cluster-precalculate /bin/sh -c "pkill -SIGTERM precalculate"
-docker exec reddit-cluster-precalculate ./precalculate --full
+docker exec clustr-precalculate /bin/sh -c "pkill -SIGTERM precalculate"
+docker exec clustr-precalculate ./precalculate --full
 ```
 
 ## Database Schema
@@ -259,7 +259,7 @@ SELECT
    ```
 3. Force full rebuild:
    ```bash
-   docker exec reddit-cluster-precalculate ./precalculate --full
+   docker exec clustr-precalculate ./precalculate --full
    ```
 
 ### Issue: Performance degraded
@@ -330,7 +330,7 @@ Incremental precalculation is backward compatible:
 4. **Monitor first few runs:**
    Check logs to confirm incremental mode activates:
    ```bash
-   docker logs -f reddit-cluster-precalculate
+   docker logs -f clustr-precalculate
    ```
 
 ### Rollback

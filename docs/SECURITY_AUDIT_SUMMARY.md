@@ -1,6 +1,6 @@
 # Security Audit and Penetration Testing - Quick Reference
 
-This document provides a quick reference for security auditing and penetration testing procedures for the Reddit Cluster Map project.
+This document provides a quick reference for security auditing and penetration testing procedures for the Clustr project.
 
 ## Quick Start
 

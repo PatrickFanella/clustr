@@ -1,6 +1,6 @@
 # Backend Load Testing with k6
 
-This directory contains k6 load tests for the Reddit Cluster Map API.
+This directory contains k6 load tests for the Clustr API.
 
 ## Prerequisites
 

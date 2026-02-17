@@ -50,7 +50,7 @@ Then edit `backend/.env` with:
 REDDIT_CLIENT_SECRET=<from reddit app>
 REDDIT_REDIRECT_URI=<your callback, e.g. https://your.domain/oauth/reddit/callback>
 REDDIT_SCOPES="identity read"
-REDDIT_USER_AGENT=reddit-cluster-map/0.1 (+your_contact)
+REDDIT_USER_AGENT=clustr/0.1 (+your_contact)
 
 POSTGRES_PASSWORD=<choose strong password>
 DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/reddit_cluster?sslmode=disable
@@ -342,7 +342,7 @@ REDDIT_CLIENT_ID=your_client_id_here              # From https://www.reddit.com/
 REDDIT_CLIENT_SECRET=your_client_secret_here      # From Reddit app settings
 REDDIT_REDIRECT_URI=http://localhost:8000/oauth/reddit/callback
 REDDIT_SCOPES="identity read"                     # OAuth scopes needed
-REDDIT_USER_AGENT=reddit-cluster-map/0.1 (+your@email.com)
+REDDIT_USER_AGENT=clustr/0.1 (+your@email.com)
 ```
 
 ### Database Configuration (Required)

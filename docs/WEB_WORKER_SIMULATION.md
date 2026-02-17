@@ -2,7 +2,7 @@
 
 ## Overview
 
-The force simulation for the Reddit Cluster Map has been moved from the main thread to a Web Worker to prevent UI blocking during physics computation. This dramatically improves responsiveness, especially with large graphs (100k+ nodes).
+The force simulation for the Clustr has been moved from the main thread to a Web Worker to prevent UI blocking during physics computation. This dramatically improves responsiveness, especially with large graphs (100k+ nodes).
 
 ## Architecture
 

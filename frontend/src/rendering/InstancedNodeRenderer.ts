@@ -173,7 +173,8 @@ export class InstancedNodeRenderer {
       const material = this.createMaterial(type);
       
       const mesh = new THREE.InstancedMesh(this.geometry, material, count);
-      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // Will be updated frequently
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      mesh.frustumCulled = false; // We handle culling at node level
       
       // Enable per-instance colors
       mesh.instanceColor = new THREE.InstancedBufferAttribute(
@@ -235,7 +236,6 @@ export class InstancedNodeRenderer {
     if (typedMesh.mesh.instanceColor) {
       typedMesh.mesh.instanceColor.needsUpdate = true;
     }
-    typedMesh.mesh.computeBoundingSphere();
   }
 
   /**
@@ -248,54 +248,28 @@ export class InstancedNodeRenderer {
     const rotation = new THREE.Quaternion();
     const scale = new THREE.Vector3();
 
-    // Track ALL items for octree rebuild (not just updated ones)
-    const octreeItems: OctreeItem<NodeData>[] = [];
-
     for (const [, typedMesh] of this.meshes.entries()) {
       let updated = false;
 
       for (let i = 0; i < typedMesh.count; i++) {
         const nodeId = typedMesh.nodeIds[i];
         const pos = positions.get(nodeId);
-        
-        // Get current position
+
+        if (!pos) continue;
+
+        // Only decompose/recompose for nodes that have new positions
         typedMesh.mesh.getMatrixAt(i, matrix);
         matrix.decompose(position, rotation, scale);
-        
-        if (pos) {
-          // Update position
-          position.set(pos.x, pos.y, pos.z);
-          matrix.compose(position, rotation, scale);
-          typedMesh.mesh.setMatrixAt(i, matrix);
-          updated = true;
-        }
-        
-        // Add ALL nodes to octree (both updated and unchanged)
-        octreeItems.push({
-          id: nodeId,
-          position: new THREE.Vector3(position.x, position.y, position.z),
-          data: {
-            id: nodeId,
-            type: typedMesh.nodeIds[i].startsWith('subreddit_') ? 'subreddit' :
-                  typedMesh.nodeIds[i].startsWith('user_') ? 'user' :
-                  typedMesh.nodeIds[i].startsWith('post_') ? 'post' :
-                  typedMesh.nodeIds[i].startsWith('comment_') ? 'comment' : 'default',
-            x: position.x,
-            y: position.y,
-            z: position.z,
-          },
-        });
+
+        position.set(pos.x, pos.y, pos.z);
+        matrix.compose(position, rotation, scale);
+        typedMesh.mesh.setMatrixAt(i, matrix);
+        updated = true;
       }
 
       if (updated) {
         typedMesh.mesh.instanceMatrix.needsUpdate = true;
-        typedMesh.mesh.computeBoundingSphere();
       }
-    }
-
-    // Rebuild octree with ALL node positions
-    if (octreeItems.length > 0) {
-      this.octree.build(octreeItems);
     }
   }
 
@@ -370,39 +344,24 @@ export class InstancedNodeRenderer {
    * @returns Node ID if intersected, null otherwise
    */
   public raycast(raycaster: THREE.Raycaster): string | null {
-    // Use octree for fast spatial query to get candidates
-    const ray = raycaster.ray;
-    const maxDistance = raycaster.far || 1000;
-    
-    const nearestItem = this.octree.raycast(ray, maxDistance);
-    if (!nearestItem) return null;
+    let nearestId: string | null = null;
+    let nearestDistance = Infinity;
 
-    // Verify hit with actual geometry raycasting
-    // Raycast all meshes to find actual intersections
-    const allIntersects: Array<{ nodeId: string; distance: number }> = [];
-    
     for (const [, typedMesh] of this.meshes.entries()) {
       const intersects = raycaster.intersectObject(typedMesh.mesh, false);
-      
+
       for (const intersect of intersects) {
-        if (intersect.instanceId !== undefined) {
-          const hitNodeId = typedMesh.nodeIds[intersect.instanceId];
-          allIntersects.push({
-            nodeId: hitNodeId,
-            distance: intersect.distance,
-          });
+        if (
+          intersect.instanceId !== undefined &&
+          intersect.distance < nearestDistance
+        ) {
+          nearestId = typedMesh.nodeIds[intersect.instanceId];
+          nearestDistance = intersect.distance;
         }
       }
     }
 
-    // Return closest actual hit
-    if (allIntersects.length > 0) {
-      allIntersects.sort((a, b) => a.distance - b.distance);
-      return allIntersects[0].nodeId;
-    }
-
-    // No geometry hits - octree candidate was outside pick radius
-    return null;
+    return nearestId;
   }
 
   /**
@@ -414,19 +373,21 @@ export class InstancedNodeRenderer {
   public queryFrustum(camera: THREE.Camera): string[] {
     // Ensure camera matrices are up to date
     camera.updateMatrixWorld();
-    camera.updateProjectionMatrix();
-    
+    if ('updateProjectionMatrix' in camera) {
+      (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+    }
+
     // Reuse frustum and matrix instances to avoid allocations
     if (!this._frustum) {
       this._frustum = new THREE.Frustum();
       this._projectionMatrix = new THREE.Matrix4();
     }
-    
-    this._projectionMatrix.multiplyMatrices(
+
+    this._projectionMatrix!.multiplyMatrices(
       camera.projectionMatrix,
       camera.matrixWorldInverse
     );
-    this._frustum.setFromProjectionMatrix(this._projectionMatrix);
+    this._frustum.setFromProjectionMatrix(this._projectionMatrix!);
 
     // Query octree for nodes in frustum
     const visibleItems = this.octree.queryFrustum(this._frustum);
@@ -495,30 +456,30 @@ export class InstancedNodeRenderer {
     return new THREE.ShaderMaterial({
       uniforms: {
         baseColor: { value: baseColor },
-        cameraPosition: { value: new THREE.Vector3() },
+        u_cameraPos: { value: new THREE.Vector3() },
         attenuationFactor: { value: 0.3 }, // Controls how much size changes with distance
         minScale: { value: 0.3 }, // Minimum scale factor (prevent nodes from becoming too small)
         maxScale: { value: 2.0 }, // Maximum scale factor (prevent nodes from becoming too large)
       },
       vertexShader: `
-        uniform vec3 cameraPosition;
+        uniform vec3 u_cameraPos;
         uniform float attenuationFactor;
         uniform float minScale;
         uniform float maxScale;
-        
+
         attribute vec3 instanceColor;
         varying vec3 vColor;
         varying vec3 vNormal;
-        
+
         void main() {
           vColor = instanceColor;
           vNormal = normalize(normalMatrix * normal);
-          
+
           // Compute instance center in world space (local origin transformed by instance matrix)
           vec4 instanceCenter = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-          
+
           // Calculate distance from camera using instance center so scale is uniform per instance
-          float dist = length(cameraPosition - instanceCenter.xyz);
+          float dist = length(u_cameraPos - instanceCenter.xyz);
           
           // Apply logarithmic attenuation for smooth scaling
           // log(1 + x) provides smooth falloff, scaled by attenuationFactor
@@ -567,8 +528,8 @@ export class InstancedNodeRenderer {
     
     for (const [, typedMesh] of this.meshes.entries()) {
       const material = typedMesh.mesh.material;
-      if (material instanceof THREE.ShaderMaterial && material.uniforms.cameraPosition) {
-        material.uniforms.cameraPosition.value.copy(this.cameraPosVector);
+      if (material instanceof THREE.ShaderMaterial && material.uniforms.u_cameraPos) {
+        material.uniforms.u_cameraPos.value.copy(this.cameraPosVector);
       }
     }
   }
@@ -584,6 +545,7 @@ export class InstancedNodeRenderer {
     }
     this.meshes.clear();
     this.nodeMap.clear();
+    this.octree.clear();
     // Dispose shared geometry once after all meshes are cleared
     this.geometry.dispose();
   }

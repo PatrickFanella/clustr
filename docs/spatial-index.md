@@ -4,7 +4,7 @@ This document describes the spatial indexing implementation for efficiently quer
 
 ## Overview
 
-The spatial R-tree index enables fast bounding box queries on the `graph_nodes` table, which is essential for viewport-based rendering and spatial queries in the Reddit Cluster Map visualization.
+The spatial R-tree index enables fast bounding box queries on the `graph_nodes` table, which is essential for viewport-based rendering and spatial queries in the Clustr visualization.
 
 ## Implementation Details
 

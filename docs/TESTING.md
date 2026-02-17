@@ -1,6 +1,6 @@
 # Testing Guide
 
-This document describes the testing infrastructure and how to run tests for the reddit-cluster-map project.
+This document describes the testing infrastructure and how to run tests for the Clustr project.
 
 ## Overview
 

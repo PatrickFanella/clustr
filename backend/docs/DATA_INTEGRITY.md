@@ -1,6 +1,6 @@
 # Data Integrity and Maintenance Guide
 
-This guide covers data integrity checks, backfill operations, and database maintenance for the Reddit Cluster Map project.
+This guide covers data integrity checks, backfill operations, and database maintenance for the Clustr project.
 
 ## Overview
 

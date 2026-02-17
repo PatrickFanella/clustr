@@ -162,7 +162,7 @@ echo "---------------------------"
 cat > "$OUTPUT_DIR/README.md" << 'EOF'
 # Performance Baseline Report
 
-This directory contains performance baseline measurements for the Reddit Cluster Map application.
+This directory contains performance baseline measurements for the Clustr application.
 
 ## Contents
 

@@ -6,7 +6,7 @@ Here's what the Performance HUD looks like when toggled on (press F12):
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                    Reddit Cluster Map - 3D View               │
+│                    Clustr - 3D View               │
 │                                                               │
 │  ┌──────────────────────┐  ┌────────────────────┐           │
 │  │ [Reload]             │  │ Performance HUD:    │  ◄─ Overlay

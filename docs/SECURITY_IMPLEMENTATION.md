@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the security and authentication hardening implemented for the Reddit Cluster Map project as specified in issue #XX.
+This document summarizes the security and authentication hardening implemented for the Clustr project as specified in issue #XX.
 
 ## Completed Tasks
 
@@ -82,7 +82,7 @@ frame-ancestors 'none'
 **Defense in Depth Added:**
 - Added CSP meta tag to `frontend/index.html`
 - Ensures CSP is enforced even if server headers are bypassed
-- Updated page title from "Vite + React + TS" to "Reddit Cluster Map"
+- Updated page title from "Vite + React + TS" to "Clustr"
 
 **Additional Security Headers (Already Present):**
 - `X-Content-Type-Options: nosniff`

@@ -12,10 +12,10 @@ echo "📁 Checking configuration files..."
 
 REQUIRED_FILES=(
     "monitoring/prometheus/prometheus.yml"
-    "monitoring/prometheus/alerts/reddit-cluster-map.yml"
+    "monitoring/prometheus/alerts/clustr.yml"
     "monitoring/grafana/provisioning/datasources/prometheus.yml"
     "monitoring/grafana/provisioning/dashboards/default.yml"
-    "monitoring/grafana/provisioning/dashboards/reddit-cluster-map-overview.json"
+    "monitoring/grafana/provisioning/dashboards/clustr-overview.json"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
@@ -32,7 +32,7 @@ echo ""
 echo "🔧 Checking Prometheus configuration syntax..."
 if command -v promtool &> /dev/null; then
     promtool check config monitoring/prometheus/prometheus.yml
-    promtool check rules monitoring/prometheus/alerts/reddit-cluster-map.yml
+    promtool check rules monitoring/prometheus/alerts/clustr.yml
     echo "  ✓ Prometheus configuration is valid"
 else
     echo "  ⚠️  promtool not found, skipping validation (optional)"

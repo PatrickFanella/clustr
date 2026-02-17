@@ -1,6 +1,6 @@
 # Keyboard Navigation and Shortcuts
 
-This document describes the keyboard shortcuts available in the Reddit Cluster Map application.
+This document describes the keyboard shortcuts available in the Clustr application.
 
 ## Available Shortcuts
 

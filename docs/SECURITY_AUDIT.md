@@ -1,6 +1,6 @@
 # Security Audit and Penetration Testing Guide
 
-This document provides comprehensive guidelines for conducting security audits and penetration testing on the Reddit Cluster Map application.
+This document provides comprehensive guidelines for conducting security audits and penetration testing on the Clustr application.
 
 ## Table of Contents
 

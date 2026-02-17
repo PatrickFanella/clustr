@@ -1,4 +1,4 @@
-# Reddit Cluster Map - Root Makefile
+# Clustr - Root Makefile
 # Manages both backend and frontend development workflows
 
 # Environment - gracefully handle missing .env
@@ -13,10 +13,10 @@ MIGRATIONS_DIR := $(ROOT_DIR)/backend/migrations
 MIGRATE_IMAGE := migrate/migrate:latest
 
 # Docker container names
-DB_CONTAINER = reddit-cluster-db
-API_CONTAINER = reddit-cluster-api
-CRAWLER_CONTAINER = reddit-cluster-crawler
-FRONTEND_CONTAINER = reddit-cluster-frontend
+DB_CONTAINER = clustr-db
+API_CONTAINER = clustr-api
+CRAWLER_CONTAINER = clustr-crawler
+FRONTEND_CONTAINER = clustr-frontend
 
 # Database credentials
 DB_USER = $(POSTGRES_USER)
@@ -29,14 +29,14 @@ DB_NAME = $(POSTGRES_DB)
 
 # Help target - shows all available targets with descriptions
 help: ## Show this help message
-	@echo "Reddit Cluster Map - Development Commands"
+	@echo "Clustr - Development Commands"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "\033[36m%-30s\033[0m %s\n", "Target", "Description"} /^[a-zA-Z_-]+:.*?##/ { printf "\033[36m%-30s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) }' $(MAKEFILE_LIST)
 
 ##@ Setup
 
 setup: ## Initial setup - install dependencies and configure environment
-	@echo "==> Setting up Reddit Cluster Map..."
+	@echo "==> Setting up Clustr..."
 	@if [ ! -f backend/.env ]; then \
 		echo "Creating backend/.env from backend/.env.example..."; \
 		cp backend/.env.example backend/.env 2>/dev/null || echo "⚠️  backend/.env.example not found"; \
@@ -332,11 +332,11 @@ backup-now: check-env ## Create a database backup
 	@echo "✓ Backup complete"
 
 backups-list: ## List available backups
-	@docker run --rm -v reddit-cluster-pgbackups:/data busybox sh -c 'ls -lh /data | sort -k9'
+	@docker run --rm -v clustr-pgbackups:/data busybox sh -c 'ls -lh /data | sort -k9'
 
 backups-download: ## Download latest backup to ./backups/
 	@mkdir -p backups
-	@docker run --rm -v reddit-cluster-pgbackups:/data -v $$PWD/backups:/out busybox /bin/sh -c \
+	@docker run --rm -v clustr-pgbackups:/data -v $$PWD/backups:/out busybox /bin/sh -c \
 		"set -e; sel=; for f in \$$(ls -1t /data 2>/dev/null || true); do \
 			if [ -s \"/data/\$$f\" ]; then sel=\"\$$f\"; break; fi; \
 		done; \
@@ -448,7 +448,7 @@ prune: ## Prune Docker system (removes unused containers, networks, images)
 
 quickstart: setup up migrate-up ## Quick start - setup, start services, and run migrations
 	@echo ""
-	@echo "✓ Reddit Cluster Map is ready!"
+	@echo "✓ Clustr is ready!"
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Start a crawl: make crawl SUB=AskReddit"

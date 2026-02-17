@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the k6-based load testing infrastructure added to the Reddit Cluster Map backend.
+This document summarizes the k6-based load testing infrastructure added to the Clustr backend.
 
 ## Implementation Details
 
