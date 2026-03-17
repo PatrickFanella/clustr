@@ -1,0 +1,136 @@
+# ========================
+# GLOBAL IGNORES (ALL PROJECTS)
+# ========================
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+*.tgz
+*.tsbuildinfo
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor & OS
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment and lockfiles
+.env*
+*.env
+*.local
+*.zip
+
+# ========================
+# SCRIPTING / TOOLS
+# ========================
+scripts/*.log
+
+# ========================
+# FRONTEND (React / Vite)
+# ========================
+frontend/node_modules/
+frontend/.env
+frontend/.env.*
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/.next/
+frontend/.parcel-cache/
+frontend/.docusaurus/
+frontend/.cache/
+frontend/.nuxt/
+frontend/.temp/
+frontend/.serverless/
+frontend/bower_components/
+frontend/.eslintcache
+frontend/.stylelintcache
+frontend/.rpt2_cache/
+frontend/.rts2_cache_*/
+frontend/report.*.json
+frontend/.pnp.*
+frontend/yarn.lock
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+frontend/coverage/
+frontend/test-results/
+
+# Bundle analysis
+frontend/dist/stats.html
+frontend/dist/stats.json
+
+# Playwright test artifacts
+frontend/playwright-report/
+frontend/test-results/
+# Keep baseline screenshots for visual regression tests
+!frontend/e2e/**/*.png
+
+# Allow this vscode setting to be committed if needed
+!frontend/.vscode/extensions.json
+
+# ========================
+# BACKEND (Go)
+# ========================
+backend/bin/
+backend/build/
+backend/coverage/
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/sqlc.json
+backend/sqlc.gen.go
+backend/**/sqlc.json
+backend/**/sqlc.gen.go
+backend/backups
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+*.pprof
+
+# Backend binaries
+backend/server
+backend/crawler
+backend/precalculate
+
+# Go coverage & profiling
+coverage.*
+*.coverprofile
+*.testprofile
+*.cpuprofile
+*.memprofile
+*.trace
+
+# Go modules and vendor
+vendor/
+
+# Temp files
+**/tmp/
+**/temp/
+*.tmp
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
