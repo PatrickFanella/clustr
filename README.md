@@ -1,6 +1,6 @@
-# Clustr (Reddit Cluster Map)
+# Reddit Cluster Map
 
-Clustr is a portfolio presentation of Reddit Cluster Map: a full-stack data visualization project that crawls Reddit, models relationships between communities and users, and renders those connections as an interactive graph. It was built to showcase the kind of engineering work I want to do professionally: backend systems, data pipelines, APIs, performance-minded frontend development, and production-ready tooling.
+Reddit Cluster Map is a full-stack data visualization project that crawls Reddit, models relationships between communities and users, and renders those connections as an interactive graph. As a portfolio piece, it highlights the kind of work I do professionally: backend systems, data pipelines, APIs, performance-minded frontend development, and production-ready tooling.
 
 ## Why this project stands out
 
@@ -32,4 +32,4 @@ This project highlights my ability to:
 - Setup and local development: [`docs/setup.md`](docs/setup.md)
 - Developer workflows: [`Makefile`](Makefile)
 
-If you're reviewing this as part of my portfolio, the main takeaway is simple: **Clustr reflects full-stack product engineering with an emphasis on data-heavy systems, clear architecture, and polished execution.**
+If you're reviewing this as part of my portfolio, the main takeaway is simple: **Reddit Cluster Map reflects full-stack product engineering with an emphasis on data-heavy systems, clear architecture, and polished execution.**
