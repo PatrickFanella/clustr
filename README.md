@@ -1,6 +1,6 @@
-# Clustr
+# Clustr (Reddit Cluster Map)
 
-Clustr is a full-stack data visualization project that crawls Reddit, models relationships between communities and users, and renders those connections as an interactive graph. It was built to showcase the kind of engineering work I want to do professionally: backend systems, data pipelines, APIs, performance-minded frontend development, and production-ready tooling.
+Clustr is a portfolio presentation of Reddit Cluster Map: a full-stack data visualization project that crawls Reddit, models relationships between communities and users, and renders those connections as an interactive graph. It was built to showcase the kind of engineering work I want to do professionally: backend systems, data pipelines, APIs, performance-minded frontend development, and production-ready tooling.
 
 ## Why this project stands out
 
