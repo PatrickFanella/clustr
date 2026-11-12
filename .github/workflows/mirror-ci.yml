@@ -127,7 +127,7 @@ jobs:
         npm run --silent size:json > bundle-stats-base.json || echo '[]' > bundle-stats-base.json
       continue-on-error: true
     - name: Compare bundle sizes
-      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       with:
         script: "const fs = require('fs');\n\n// Read stats files\nlet currentStats = [];\nlet baseStats = [];\n\
           \ntry {\n  currentStats = JSON.parse(fs.readFileSync('frontend/bundle-stats.json', 'utf8'));\n} catch\
